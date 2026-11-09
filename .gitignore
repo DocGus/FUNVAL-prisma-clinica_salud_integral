@@ -198,3 +198,4 @@ venv/
 
 *.sql.backup
 *.dump
+/generated/

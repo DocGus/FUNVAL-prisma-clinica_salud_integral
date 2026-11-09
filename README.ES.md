@@ -1,197 +1,233 @@
-# FUNVAL — Plantilla de Proyecto de Base de Datos
+# FUNVAL — Plantilla de Proyecto Full Stack con Prisma
 
 ## 1. Descripción
 
-Esta plantilla proporciona una estructura estandarizada y una metodología de trabajo para analizar, diseñar, implementar, documentar y validar bases de datos relacionales.
+Esta plantilla proporciona una estructura estandarizada y una metodología de trabajo para analizar, diseñar, implementar, documentar y validar sistemas que utilizan bases de datos relacionales y APIs REST.
 
-Está diseñada para utilizarse como punto de partida en los ejercicios y proyectos académicos de bases de datos desarrollados durante la formación Full Stack en FUNVAL.
+Está diseñada para utilizarse como punto de partida en los ejercicios y proyectos académicos de desarrollo Full Stack durante la formación en FUNVAL.
 
-La metodología organiza el desarrollo en dos grandes áreas:
+La metodología organiza el desarrollo en tres grandes áreas:
 
-- **Diseño y documentación:** análisis del problema, requerimientos, reglas de negocio, modelado y arquitectura.
-- **Implementación y validación:** creación de la base de datos, construcción del esquema, inserción de datos y consultas SQL.
+- **Análisis y diseño:** comprensión del problema, identificación de requerimientos, reglas de negocio, modelado de datos y arquitectura.
+- **Implementación:** construcción de una API REST utilizando Node.js, pnpm, TypeScript, Express 5 y Prisma ORM 7, conectada a PostgreSQL.
+- **Validación y documentación:** comprobación de las reglas de negocio, integridad de los datos, funcionamiento de los endpoints y comportamiento del sistema.
 
-El propósito es trabajar de manera progresiva, documentada y reproducible, evitando comenzar directamente con la creación de tablas sin comprender primero el problema que se desea resolver.
+El propósito es trabajar de manera progresiva, documentada y reproducible, evitando comenzar directamente con la programación sin comprender primero el problema que se desea resolver.
+
+La plantilla busca mantener una separación clara entre las necesidades del negocio, el diseño de los datos y las decisiones técnicas de implementación.
 
 ## 2. Tecnologías y herramientas
 
+### Backend
+
+- **Node.js:** entorno de ejecución de JavaScript; requiere `>=20.19.0`.
+- **pnpm:** gestor de paquetes; el proyecto fija la versión `12.18.0`.
+- **TypeScript:** lenguaje de programación con tipado estático.
+- **Express 5:** framework para construir APIs REST.
+- **Prisma ORM 7:** herramienta para modelar datos, generar el cliente y administrar migraciones en proyectos derivados.
+- **Zod:** biblioteca utilizada para validar variables de entorno y disponible para validar datos de entrada.
+- **Vitest y Supertest:** herramientas para pruebas unitarias y HTTP.
+- **Swagger UI:** interfaz para consultar la especificación OpenAPI básica.
+
+La plantilla no incluye autenticación implementada ni instala JWT o bcrypt.
+La autenticación con JWT y el hashing de contraseñas son funcionalidades
+futuras y opcionales para un proyecto derivado.
+
+### Base de datos
+
 - **PostgreSQL:** sistema gestor de bases de datos relacionales.
-- **SQL:** lenguaje para definir estructuras, manipular datos y realizar consultas.
+- **Prisma Schema:** lenguaje de modelado utilizado para definir modelos, atributos y relaciones.
+- **Prisma Migrate:** herramienta disponible para administrar cambios estructurales cuando un proyecto derivado agregue modelos y migraciones.
+- **Prisma Client:** cliente generado para realizar consultas y operaciones desde TypeScript.
+
+### Diseño y documentación
+
 - **DBML:** lenguaje para representar modelos relacionales.
+- **Mermaid / herramientas ERD:** representación gráfica de modelos y relaciones.
+- **Markdown:** documentación técnica y metodológica.
+
+### Herramientas de desarrollo
+
 - **Visual Studio Code:** entorno de desarrollo.
 - **Git:** sistema de control de versiones.
 - **GitHub:** alojamiento y colaboración de proyectos.
+- **Docker:** herramienta opcional para administrar entornos de desarrollo y bases de datos.
 
 ## 3. Estructura del proyecto
 
+Estructura actual de la plantilla:
+
 ```text
-database-project/
-│
-├── database/
-│   ├── 00_create_db.sql
-│   ├── 01_schema.sql
-│   ├── 02_seed.sql
-│   └── 03_queries.sql
-│
-├── docs/
-│   ├── 00_requirements.md
-│   ├── 01_business-rules.md
-│   ├── 02_entities-and-attributes.md
-│   ├── 03_diagram-er.md
-│   ├── 04_relation-model.dbml
-│   ├── 05_normalization.md
-│   ├── 06_architecture.md
-│   └── 07_diagram-er.png
-│
-├── .gitignore
-├── README.ES.md
-└── README.EN.md
+.
+├── docs/                 Documentación académica y técnica
+├── generated/            Clientes Prisma generados localmente (ignorado por Git)
+├── prisma/
+│   ├── migrations/       Sin migraciones de dominio al inicio
+│   └── schema.prisma     Proveedor PostgreSQL y generador, sin modelos
+├── src/
+│   ├── config/           Entorno y cliente Prisma de la aplicación
+│   ├── app.ts            Aplicación Express, health check y Swagger UI
+│   └── server.ts         Inicio del servidor HTTP
+├── tests/
+│   ├── integration/      Conexión PostgreSQL de solo lectura (SELECT 1)
+│   ├── support/          Cliente y validación de URL de prueba
+│   └── *.test.ts         Pruebas unitarias, HTTP y de aislamiento
+├── .env.example
+├── package.json
+├── pnpm-lock.yaml
+├── prisma7.config.ts
+├── tsconfig.json
+├── tsconfig.build.json
+├── vitest.config.ts
+└── vitest.integration.config.ts
 ```
+
+El esquema y las migraciones de producción comienzan sin modelos de negocio ni
+migraciones de dominio. La estructura puede ampliarse en un proyecto derivado
+sin agregar carpetas, dependencias o capas que no aporten valor.
+
+### Instalación, variables de entorno y comandos
+
+Requisitos: Node.js `>=20.19.0` y pnpm `12.18.0`. PostgreSQL se necesita para
+conectar la aplicación o ejecutar la prueba de integración.
+
+```sh
+pnpm install
+cp .env.example .env
+```
+
+Configura las URLs en `.env`; no publiques ese archivo ni sus credenciales:
+
+- `DATABASE_URL`: URL obligatoria para la configuración Prisma normal de la
+  aplicación.
+- `TEST_DATABASE_URL`: URL opcional para la prueba de integración. Debe apuntar
+  a una base PostgreSQL **exclusiva para pruebas** cuyo nombre termine en
+  `_test`. Nunca sustituye a `DATABASE_URL`.
+- `PORT`: puerto HTTP, por defecto `3000`.
+- `NODE_ENV`: `development`, `test` o `production`, por defecto `development`.
+
+Comandos definidos en `package.json`:
+
+```sh
+pnpm prisma:generate
+pnpm dev
+pnpm test
+pnpm test:integration
+pnpm typecheck
+pnpm build
+pnpm start
+```
+
+`pnpm test` ejecuta las pruebas unitarias y HTTP sin requerir PostgreSQL.
+`pnpm test:integration` utiliza solo `TEST_DATABASE_URL`, ejecuta
+`SELECT 1 AS result` y desconecta; no aplica migraciones ni realiza escrituras.
+`pnpm typecheck` verifica tipos y `pnpm build` compila únicamente la salida de
+producción. La API ofrece `GET /health` y Swagger UI en `/api/docs`.
 
 ## 4. Metodología de desarrollo
 
-El desarrollo se divide en cuatro etapas generales:
+El desarrollo se divide en seis fases generales:
 
-1. Análisis: comprender el problema y determinar qué información necesita administrar el sistema.
-2. Diseño: transformar los requerimientos en un modelo de datos estructurado.
-3. Implementación: construir la base de datos utilizando PostgreSQL y SQL.
-4. Validación: comprobar la integridad de los datos y verificar que las consultas respondan a las necesidades del sistema.
+1. Análisis: comprender el problema y determinar qué necesita resolver el sistema.
+2. Diseño: transformar los requerimientos en reglas de negocio y modelos de datos.
+3. Arquitectura: definir la organización de la base de datos y la API.
+4. Implementación: construir el backend y la persistencia utilizando Prisma y PostgreSQL.
+5. Validación: comprobar las reglas, restricciones, consultas y endpoints.
+6. Documentación: mantener actualizados los documentos y registrar la evolución del proyecto.
 
 ### Fase 1. Análisis de requerimientos
 
-Archivo: docs/00_requirements.md
+**Archivo:** `docs/00.0_requirements.md`
 
-Objetivo: comprender la idea del cliente, analizar su viabilidad desde la lógica del negocio y construir, mediante un proceso de consulta y validación, una especificación clara de lo que el sistema debe resolver.
+**Objetivo:** comprender la idea del cliente, analizar su viabilidad desde la lógica del negocio y construir una especificación clara de lo que el sistema debe resolver.
 
-Etapas y actividades:
+Actividades:
 
-1. Consulta inicial con el cliente
+1. Consulta inicial con el cliente.
+   - Obtener y documentar la idea original.
+   - Comprender el problema o necesidad.
+   - Identificar los objetivos esperados.
+   - Conocer los procesos actuales.
+   - Identificar actores y responsabilidades.
+   - Registrar las funcionalidades solicitadas.
 
-Obtener y documentar la idea original del cliente sin asumir ni completar información por cuenta propia.
+2. Análisis de la idea y detección de vacíos.
+   - Examinar los procesos desde la lógica del negocio.
+   - Identificar información faltante o ambigua.
+   - Detectar contradicciones.
+   - Identificar responsabilidades y permisos no especificados.
+   - Examinar flujos de trabajo y excepciones.
+   - Formular preguntas y proponer alternativas.
 
-Comprender el problema o necesidad que desea resolver.
+3. Consulta complementaria y validación.
+   - Presentar dudas y contradicciones.
+   - Aclarar procesos y excepciones.
+   - Definir responsabilidades y permisos.
+   - Confirmar el alcance.
+   - Registrar respuestas, decisiones y acuerdos.
+   - Diferenciar requerimientos confirmados, suposiciones y cuestiones pendientes.
 
-Conocer el contexto en el que surge la necesidad.
+4. Consolidación de requerimientos.
+   - Definir propósito y alcance.
+   - Identificar actores.
+   - Describir procesos y funcionalidades.
+   - Establecer requerimientos funcionales y no funcionales.
+   - Documentar restricciones.
+   - Definir criterios de aceptación.
 
-Identificar los objetivos que espera alcanzar.
-
-Conocer cómo se realizan actualmente las actividades del negocio.
-
-Identificar a las personas involucradas y sus responsabilidades.
-
-Registrar las funcionalidades que imagina para el sistema.
-
-Documentar el enunciado original y las expectativas del cliente.
-
-2. Análisis de la idea y detección de vacíos
-
-Examinar la información obtenida para determinar si la propuesta tiene suficiente coherencia y detalle para convertirse en un sistema funcional.
-
-Analizar los procesos desde la lógica del negocio.
-
-Identificar información faltante o ambigua.
-
-Detectar contradicciones entre las necesidades planteadas.
-
-Identificar actores, responsabilidades y permisos no especificados.
-
-Examinar los flujos de trabajo y sus posibles excepciones.
-
-Identificar reglas de negocio implícitas o no contempladas.
-
-Detectar escenarios que podrían afectar el funcionamiento del sistema.
-
-Formular preguntas y proponer alternativas para resolver los vacíos identificados.
-
-3. Consulta complementaria y validación con el cliente
-
-Regresar con el cliente para aclarar los puntos detectados y construir una definición compartida de cómo debe funcionar el negocio y el sistema.
-
-Presentar las dudas, ambigüedades y contradicciones encontradas.
-
-Plantear preguntas específicas sobre los procesos y sus excepciones.
-
-Consultar las reglas de negocio necesarias para cada operación.
-
-Proponer alternativas cuando existan diferentes formas de resolver una necesidad.
-
-Acordar responsabilidades, permisos y flujos de trabajo.
-
-Confirmar qué necesidades forman parte del alcance del proyecto.
-
-Registrar las respuestas, decisiones y acuerdos alcanzados.
-
-Diferenciar los requerimientos confirmados de las suposiciones y cuestiones pendientes.
-
-4. Consolidación de la especificación de requerimientos
-
-Integrar el enunciado original con las aclaraciones y acuerdos obtenidos para producir una descripción completa y coherente del sistema.
-
-Definir el propósito y alcance del sistema.
-
-Identificar actores y sus responsabilidades.
-
-Describir los procesos y funcionalidades esperadas.
-
-Establecer los requerimientos funcionales y no funcionales.
-
-Documentar las reglas y restricciones generales.
-
-Establecer los resultados esperados y criterios de aceptación.
-
-Verificar que la especificación represente lo acordado con el cliente.
-
-Resultado esperado: un documento de requerimientos que represente una visión compartida y validada entre el cliente y el equipo de desarrollo, con suficiente claridad sobre la lógica del negocio, los procesos, las reglas y las necesidades que deberá resolver el sistema.
+**Resultado esperado:** un documento de requerimientos que represente una visión clara y validada del sistema.
 
 ### Fase 2. Reglas de negocio
 
-**Archivo:** `docs/01_business-rules.md`
+**Archivo:** `docs/01.0_business-rules.md`
 
 **Objetivo:** establecer las condiciones que regulan el funcionamiento del sistema.
 
 Actividades:
 
-- Identificar las restricciones del negocio.
-- Definir las condiciones para registrar información.
-- Establecer las relaciones permitidas entre los elementos del sistema.
-- Determinar las reglas de participación.
+- Identificar restricciones del negocio.
+- Definir condiciones para registrar y modificar información.
+- Establecer relaciones permitidas.
+- Determinar reglas de participación.
 - Identificar restricciones de unicidad y obligatoriedad.
-- Definir condiciones que deben respetarse para mantener la consistencia de los datos.
+- Definir condiciones para mantener la consistencia de los datos.
+- Identificar reglas que deberán validarse en la aplicación.
 
-**Resultado esperado:** un conjunto de reglas claras que posteriormente puedan traducirse en relaciones, restricciones y validaciones dentro de la base de datos.
+**Resultado esperado:** un conjunto de reglas claras que puedan traducirse en modelos, restricciones de base de datos y validaciones del backend.
 
 ### Fase 3. Entidades y atributos
 
-**Archivo:** `docs/02_entities-and-attributes.md`
+**Archivo:** `docs/02.0_entities-and-attributes.md`
 
 **Objetivo:** identificar los elementos del sistema que necesitan representarse mediante datos.
 
 Actividades:
 
-- Identificar las entidades principales.
+- Identificar entidades principales.
 - Diferenciar entidades independientes y dependientes.
-- Identificar los atributos de cada entidad.
+- Identificar atributos.
 - Definir el significado de cada atributo.
 - Proponer claves primarias.
-- Identificar posibles claves candidatas.
+- Identificar claves candidatas.
 - Determinar atributos obligatorios, opcionales y únicos.
+- Identificar posibles relaciones entre entidades.
 
 **Resultado esperado:** un catálogo de entidades y atributos que sirva como base para construir el modelo entidad-relación.
 
 ### Fase 4. Modelo entidad-relación
 
 **Archivos:**
-- `docs/03_diagram-er.md`
-- `docs/07_diagram-er.png`
+
+- `docs/03.0_diagram-er.md`
 
 **Objetivo:** representar gráficamente la estructura conceptual de los datos y sus relaciones.
 
 Actividades:
 
-- Establecer las relaciones entre entidades.
-- Definir las cardinalidades: uno a uno, uno a muchos y muchos a muchos.
+- Establecer relaciones entre entidades.
+- Definir cardinalidades: uno a uno, uno a muchos y muchos a muchos.
 - Identificar entidades asociativas cuando sean necesarias.
-- Determinar la participación obligatoria u opcional.
+- Determinar participación obligatoria u opcional.
 - Documentar las relaciones y sus justificaciones.
 - Construir el diagrama entidad-relación.
 - Revisar que el diagrama represente las reglas de negocio.
@@ -200,18 +236,17 @@ Actividades:
 
 ### Fase 5. Modelo relacional
 
-**Archivo:** `docs/04_relation-model.dbml`
+**Archivo:** `docs/04.0_relation-model.dbml`
 
 **Objetivo:** transformar el modelo conceptual en una estructura relacional.
 
 Actividades:
 
-- Convertir las entidades en tablas.
-- Definir las columnas.
-- Asignar tipos de datos.
-- Establecer claves primarias (PK).
-- Establecer claves foráneas (FK).
-- Resolver relaciones muchos a muchos mediante tablas asociativas.
+- Convertir entidades en tablas.
+- Definir columnas.
+- Proponer tipos de datos.
+- Establecer claves primarias y foráneas.
+- Resolver relaciones muchos a muchos.
 - Definir restricciones de integridad.
 - Representar el modelo mediante DBML.
 - Generar una visualización del esquema.
@@ -220,132 +255,226 @@ Actividades:
 
 ### Fase 6. Normalización
 
-**Archivo:** `docs/05_normalization.md`
+**Archivo:** `docs/05.0_normalization.md`
 
-**Objetivo:** evaluar la estructura de las tablas para reducir redundancias y prevenir anomalías en las operaciones de datos.
+**Objetivo:** evaluar la estructura de las tablas para reducir redundancias y prevenir anomalías.
 
 Actividades:
 
 - Identificar dependencias funcionales.
-- Revisar la Primera Forma Normal (1FN).
-- Revisar la Segunda Forma Normal (2FN).
-- Revisar la Tercera Forma Normal (3FN).
-- Identificar posibles redundancias.
+- Revisar Primera Forma Normal (1FN).
+- Revisar Segunda Forma Normal (2FN).
+- Revisar Tercera Forma Normal (3FN).
+- Identificar redundancias.
 - Evaluar anomalías de inserción, actualización y eliminación.
 - Documentar las decisiones de normalización.
 
 **Resultado esperado:** una estructura relacional consistente y justificada desde el punto de vista de la normalización.
 
-### Fase 7. Arquitectura de la base de datos
+### Fase 7. Arquitectura del sistema
 
-**Archivo:** `docs/06_architecture.md`
+**Archivo:** `docs/06.0_architecture.md`
 
-**Objetivo:** documentar la organización general de la solución y las decisiones de diseño.
-
-Actividades:
-
-- Describir la organización de la base de datos.
-- Explicar cómo se relacionan sus componentes.
-- Documentar las decisiones arquitectónicas.
-- Describir las responsabilidades de las entidades principales.
-- Explicar cómo el modelo responde a los requerimientos.
-- Identificar aspectos relevantes para su mantenimiento y evolución.
-
-**Resultado esperado:** una descripción técnica y estructural de la solución diseñada.
-
-## 5. Implementación de la base de datos
-
-Una vez finalizado el análisis y el diseño, comienza la implementación utilizando PostgreSQL.
-
-### Fase 8. Creación de la base de datos
-
-**Archivo:** `database/00_create_db.sql`
-
-**Objetivo:** crear la base de datos que alojará el esquema relacional.
+**Objetivo:** documentar la organización general de la solución y las decisiones arquitectónicas.
 
 Actividades:
 
-- Definir el nombre de la base de datos.
-- Configurar los parámetros necesarios para su creación.
-- Ejecutar el script desde una conexión administrativa.
-- Verificar que la base de datos exista.
+- Describir los componentes principales.
+- Explicar la relación entre backend y base de datos.
+- Definir las responsabilidades de cada capa.
+- Documentar el flujo de las solicitudes HTTP.
+- Explicar la conexión entre Express, Prisma y PostgreSQL.
+- Identificar decisiones relevantes para mantenimiento y evolución.
 
-**Resultado esperado:** una base de datos creada y disponible para recibir las tablas.
+**Resultado esperado:** una descripción técnica de la arquitectura del sistema.
 
-### Fase 9. Implementación del esquema
+### Fase 8. Diseño de la API
 
-**Archivo:** `database/01_schema.sql`
+**Documento sugerido para el proyecto derivado:** diseño de la API. No forma
+parte actualmente de la plantilla.
 
-**Objetivo:** construir físicamente las tablas y relaciones definidas en el modelo relacional.
+**Objetivo:** definir cómo el backend expondrá las funcionalidades del sistema mediante endpoints REST.
 
 Actividades:
 
-- Crear las tablas.
-- Definir columnas y tipos de datos.
-- Establecer claves primarias.
-- Establecer claves foráneas.
-- Aplicar restricciones `NOT NULL`, `UNIQUE` y `CHECK` cuando correspondan.
-- Definir acciones referenciales cuando sean necesarias.
-- Crear índices cuando estén justificados.
-- Verificar la integridad estructural del esquema.
+- Identificar los recursos de la API.
+- Definir endpoints y métodos HTTP.
+- Establecer parámetros y datos de entrada.
+- Definir estructuras de respuesta.
+- Documentar códigos de estado HTTP.
+- Identificar endpoints protegidos.
+- Establecer permisos y responsabilidades por rol.
+- Relacionar cada endpoint con los requerimientos y reglas de negocio.
 
-**Resultado esperado:** una base de datos con todas sus tablas, relaciones y restricciones correctamente implementadas.
+**Resultado esperado:** una especificación de endpoints que permita implementar y validar la API de forma ordenada.
 
-### Fase 10. Inserción de datos de prueba
+### Fase 9. Estrategia de validación
 
-**Archivo:** `database/02_seed.sql`
+**Documento sugerido para el proyecto derivado:** estrategia de validación. No
+forma parte actualmente de la plantilla.
 
-**Objetivo:** poblar la base de datos con información que permita comprobar su funcionamiento.
+**Objetivo:** establecer cómo se comprobará el funcionamiento del sistema.
+
+Actividades:
+
+- Identificar escenarios de prueba.
+- Definir validaciones de entrada con Zod.
+- Identificar restricciones que debe garantizar PostgreSQL.
+- Definir pruebas de endpoints.
+- Comprobar relaciones y restricciones.
+- Validar autenticación y permisos cuando correspondan.
+- Establecer criterios de aceptación.
+
+**Resultado esperado:** un conjunto de escenarios y criterios que permitan comprobar que la implementación cumple los requerimientos.
+
+## 5. Implementación del sistema
+
+Una vez finalizado el análisis y el diseño, comienza la implementación técnica.
+
+### Fase 10. Configuración del entorno
+
+**Archivos principales:**
+
+- `package.json`
+- `tsconfig.json`
+- `.env`
+- `.env.example`
+- `prisma7.config.ts`
+
+**Objetivo:** preparar el entorno de desarrollo y configurar los componentes necesarios.
+
+Actividades:
+
+- Inicializar el proyecto Node.js.
+- Configurar TypeScript.
+- Instalar y configurar Express.
+- Instalar Prisma ORM.
+- Configurar PostgreSQL.
+- Configurar las variables de entorno.
+- Preparar la conexión mediante el adaptador correspondiente a PostgreSQL.
+- Verificar que el entorno funcione correctamente.
+
+**Resultado esperado:** un entorno de desarrollo configurado y preparado para implementar la API y su persistencia.
+
+### Fase 11. Implementación del modelo Prisma
+
+**Archivo:** `prisma/schema.prisma`
+
+**Objetivo:** representar el modelo relacional mediante los modelos, campos y relaciones de Prisma.
+
+Actividades:
+
+- Definir los modelos.
+- Establecer identificadores.
+- Definir tipos de datos.
+- Establecer campos obligatorios y opcionales.
+- Definir relaciones.
+- Configurar claves únicas.
+- Definir índices cuando estén justificados.
+- Configurar enumeraciones cuando sean necesarias.
+- Comparar el esquema Prisma con el modelo relacional documentado.
+
+**Resultado esperado:** un esquema Prisma coherente con el diseño de datos aprobado.
+
+### Fase 12. Migraciones de base de datos
+
+**Directorio:** `prisma/migrations/`
+
+**Objetivo:** implementar y registrar los cambios estructurales de la base de datos.
+
+Actividades:
+
+- Generar la migración inicial.
+- Revisar los cambios generados.
+- Aplicar las migraciones.
+- Verificar la estructura en PostgreSQL.
+- Registrar cada modificación estructural.
+- Mantener sincronizado el esquema Prisma con la base de datos.
+
+**Resultado esperado:** una base de datos creada y evolucionada mediante migraciones reproducibles.
+
+### Fase 13. Datos iniciales
+
+**Archivo:** `prisma/seed.ts`
+
+**Objetivo:** poblar la base de datos con información de prueba.
 
 Actividades:
 
 - Preparar registros representativos.
-- Respetar el orden de inserción según las dependencias entre tablas.
-- Insertar primero los registros requeridos por las claves foráneas.
-- Comprobar las restricciones de integridad.
-- Verificar que los registros se hayan insertado correctamente.
-- Revisar que los datos sean coherentes con las reglas de negocio.
+- Respetar las dependencias entre modelos.
+- Insertar registros relacionados correctamente.
+- Comprobar restricciones de integridad.
+- Verificar que los datos sean coherentes con las reglas de negocio.
+- Evitar duplicaciones cuando se vuelva a ejecutar el proceso.
 
-**Resultado esperado:** una base de datos poblada con registros de prueba relacionados correctamente.
+**Resultado esperado:** una base de datos poblada con información de prueba útil para desarrollar y validar el sistema.
 
-### Fase 11. Consultas y validación
+### Fase 14. Implementación de la API REST
 
-**Archivo:** `database/03_queries.sql`
+**Directorio:** `src/`
 
-**Objetivo:** consultar y analizar la información almacenada, comprobando que la base de datos responda a las necesidades del sistema.
+**Objetivo:** desarrollar los endpoints que permiten interactuar con los recursos del sistema.
+
+Responsabilidades principales:
+
+- `routes/`: definir las rutas y métodos HTTP.
+- `controllers/`: recibir solicitudes y gestionar las respuestas.
+- `services/`: implementar la lógica de aplicación y coordinar operaciones.
+- `schemas/`: validar datos de entrada mediante Zod.
+- `middlewares/`: gestionar autenticación, autorización y validaciones transversales.
+- `config/`: centralizar configuraciones.
+- `utils/`: mantener funciones auxiliares reutilizables.
+- `app.ts`: configurar Express.
+- `server.ts`: iniciar el servidor.
+
+La organización deberá responder a las necesidades reales del proyecto y no introducir capas innecesarias.
+
+**Resultado esperado:** una API REST funcional que implemente los requerimientos y reglas de negocio utilizando Prisma Client para acceder a PostgreSQL.
+
+### Fase 15. Consultas y operaciones con Prisma Client
+
+**Objetivo:** recuperar, registrar, actualizar y eliminar información mediante Prisma Client.
 
 Actividades:
 
-- Crear consultas `SELECT`.
-- Aplicar filtros con `WHERE`.
-- Ordenar resultados con `ORDER BY`.
-- Combinar tablas mediante `JOIN`.
-- Utilizar funciones de agregación.
-- Agrupar información con `GROUP BY`.
-- Aplicar condiciones sobre agrupaciones con `HAVING`.
-- Consultar información relacionada entre distintas entidades.
-- Validar escenarios definidos durante el análisis de requerimientos.
+- Crear registros con `create`.
+- Consultar registros con `findMany`, `findUnique` y `findFirst`.
+- Actualizar información con `update` y `updateMany`.
+- Eliminar registros con `delete` y `deleteMany`.
+- Aplicar filtros, ordenamientos y paginación.
+- Consultar relaciones mediante `include` y `select`.
+- Utilizar operaciones de agregación y agrupación.
+- Implementar transacciones cuando sean necesarias.
+- Utilizar consultas SQL parametrizadas mediante `$queryRaw` únicamente cuando el caso lo justifique.
 
-**Resultado esperado:** un conjunto organizado de consultas SQL que demuestre que la información puede recuperarse y analizarse correctamente.
+**Resultado esperado:** operaciones de persistencia que respondan a los requerimientos del sistema y respeten las reglas de negocio.
 
-## 6. Orden de ejecución de los scripts
+## 6. Orden general de implementación
 
-Los scripts SQL deben ejecutarse en el siguiente orden:
+El flujo recomendado es:
 
-| Orden | Archivo | Función |
+| Orden | Actividad | Herramienta |
 |---|---|---|
-| 1 | `00_create_db.sql` | Crear la base de datos. |
-| 2 | `01_schema.sql` | Crear tablas, relaciones y restricciones. |
-| 3 | `02_seed.sql` | Insertar datos de prueba. |
-| 4 | `03_queries.sql` | Consultar y validar la información. |
+| 1 | Configurar el entorno | Node.js y TypeScript |
+| 2 | Configurar PostgreSQL y Prisma | Prisma ORM |
+| 3 | Definir los modelos | `schema.prisma` |
+| 4 | Crear la estructura de la base de datos | Prisma Migrate |
+| 5 | Insertar datos iniciales | `seed.ts` |
+| 6 | Implementar rutas y controladores | Express |
+| 7 | Implementar lógica de aplicación | Services y Prisma Client |
+| 8 | Validar datos de entrada | Zod |
+| 9 | Evaluar funcionalidades de seguridad opcionales | Autenticación y hashing de contraseñas, si el proyecto lo requiere |
+| 10 | Ejecutar pruebas | Tests |
+| 11 | Documentar la API | Swagger/OpenAPI, cuando corresponda |
 
-**Importante:** el primer script se ejecuta desde una conexión administrativa. Los siguientes se ejecutan después de conectarse a la base de datos creada.
-
-El script de datos de prueba no debe ejecutarse repetidamente sobre una base que ya contiene los mismos registros sin revisar previamente sus efectos.
+El orden podrá ajustarse de acuerdo con los requerimientos y el alcance de cada proyecto.
 
 ## 7. Validación del proyecto
 
 Antes de considerar terminado el ejercicio, verificar:
+
+### Análisis y diseño
 
 - [ ] Los requerimientos están documentados.
 - [ ] Las reglas de negocio están definidas.
@@ -354,17 +483,30 @@ Antes de considerar terminado el ejercicio, verificar:
 - [ ] El modelo relacional coincide con el diseño conceptual.
 - [ ] La normalización está documentada.
 - [ ] La arquitectura está explicada.
-- [ ] La base de datos se crea correctamente.
-- [ ] Todas las tablas y restricciones funcionan.
-- [ ] Los datos de prueba respetan las relaciones.
-- [ ] Las consultas SQL producen resultados esperados.
+- [ ] Los endpoints están especificados.
+- [ ] La estrategia de validación está definida.
+
+### Implementación
+
+- [ ] El entorno de desarrollo está configurado.
+- [ ] PostgreSQL está disponible.
+- [ ] Prisma está conectado correctamente.
+- [ ] Los modelos Prisma representan el diseño aprobado.
+- [ ] Las migraciones se ejecutan correctamente.
+- [ ] Los datos iniciales respetan las relaciones.
+- [ ] Los endpoints responden correctamente.
+- [ ] Las validaciones de entrada funcionan.
+- [ ] Las reglas de negocio se respetan.
+- [ ] La autenticación y autorización se validan si se implementan como funcionalidades del proyecto derivado.
+- [ ] Las consultas y operaciones de Prisma producen resultados esperados.
+- [ ] Las pruebas están ejecutadas.
 - [ ] La documentación está actualizada.
 
 ## 8. Control de versiones
 
 Utilizar Git para registrar la evolución del proyecto.
 
-Flujo básico de trabajo:
+Flujo básico:
 
 ```bash
 git status
@@ -375,23 +517,30 @@ git push
 
 Ejemplos de mensajes:
 
-- `docs: add database requirements`
-- `feat: implement database schema`
-- `feat: add seed data`
-- `test: validate database queries`
-- `docs: update ER diagram`
+- `docs: add business requirements`
+- `docs: document database relationships`
+- `feat: configure prisma schema`
+- `feat: create initial database migration`
+- `feat: implement patients endpoints`
+- `feat: add request validation with zod`
+- `test: validate patient endpoints`
+- `docs: update API documentation`
 
 No incluir credenciales, archivos `.env` ni información sensible en el repositorio.
 
 ## 9. Principios de trabajo
 
-- Comprender el problema antes de crear tablas.
+- Comprender el problema antes de diseñar los datos.
 - Justificar las decisiones de diseño.
-- Mantener coherencia entre requerimientos, reglas de negocio y modelo de datos.
+- Mantener coherencia entre requerimientos, reglas de negocio y modelos.
 - Documentar cada etapa del proceso.
-- Implementar el esquema a partir del modelo relacional.
-- Validar las relaciones y restricciones con datos de prueba.
-- Mantener los scripts organizados y reproducibles.
+- Separar el diseño relacional de su implementación mediante Prisma.
+- Evitar agregar entidades, atributos o reglas innecesarias.
+- Utilizar migraciones para administrar los cambios estructurales.
+- Aplicar validaciones tanto en la aplicación como en la base de datos cuando corresponda.
+- Mantener separadas las responsabilidades del backend.
+- Validar las funcionalidades mediante pruebas.
+- Mantener los archivos organizados y reproducibles.
 - Utilizar control de versiones desde el inicio del proyecto.
 
 ## 10. Autor
@@ -400,4 +549,4 @@ No incluir credenciales, archivos `.env` ni información sensible en el reposito
 
 FUNVAL — Full Stack Development
 
-Database Design and Implementation Practice.
+Database Design and Full Stack API Implementation Practice.
