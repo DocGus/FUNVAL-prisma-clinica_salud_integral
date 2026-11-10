@@ -1,6 +1,8 @@
+
 import cors from "cors";
 import express, { type Express } from "express";
 import swaggerUi from "swagger-ui-express";
+import patientsRoutes from "./routes/patientsRoutes.js";
 
 const apiDocument = {
   openapi: "3.0.3",
@@ -26,6 +28,8 @@ export const app: Express = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/patients", patientsRoutes);
 
 app.get("/health", (_request, response) => {
   response.status(200).json({ status: "ok" });
