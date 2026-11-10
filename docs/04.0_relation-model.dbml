@@ -1,6 +1,7 @@
+
 /*
 ============================================================
-DOCUMENTO: 04_relation-model.dbml
+DOCUMENTO: 04.0_relation-model.dbml
 ============================================================
 
 FUNCIÓN:
@@ -16,22 +17,24 @@ antes de implementar las tablas mediante SQL en PostgreSQL.
 
 RELACIÓN CON LOS DOCUMENTOS ANTERIORES:
 
-- 00_requirements.md:
+- 00.0_requirements.md:
   Define las necesidades del cliente.
-- 01_business-rules.md:
+- 01.0_business-rules.md:
   Define las reglas del negocio.
-- 02_entities-and-attributes.md:
+- 02.0_entities-and-attributes.md:
   Identifica entidades y atributos.
-- 03_diagram-er.md:
+- 03.0_diagram-er.md:
   Representa las relaciones conceptuales.
-- 04_relation-model.dbml:
+- 04.0_relation-model.dbml:
   Define la estructura lógica de tablas y relaciones.
 
 IMPORTANTE:
 DBML no es SQL. Es un lenguaje para describir estructuras
 de bases de datos. Se utilizará como referencia para implementar
 posteriormente el esquema en PostgreSQL.
+*/
 
+/*
 ============================================================
 CONCEPTOS FUNDAMENTALES
 ============================================================
@@ -70,18 +73,20 @@ Estructura que puede mejorar el rendimiento de determinadas consultas.
 OBJETIVO:
 Declarar las tablas que formarán parte de la base de datos.
 
-SINTAXIS GENERAL:
+TABLAS DEL PROYECTO:
 
-Table nombre_tabla {
-  nombre_columna tipo [restricciones]
-}
+1. patients: almacena los datos de los pacientes.
+2. doctors: almacena los datos de los médicos.
+3. specialties: almacena el catálogo de especialidades.
+4. appointments: almacena las citas médicas.
+5. users: almacena las cuentas de acceso al sistema.
 
-RECOMENDACIONES:
-- Utilizar nombres descriptivos.
-- Mantener una convención uniforme.
-- Preferir nombres en singular o plural de manera consistente.
-- Evitar nombres reservados de SQL.
-- Justificar cada tabla mediante el análisis previo.
+JUSTIFICACIÓN:
+Cada tabla representa una entidad identificada en el documento
+02.0_entities-and-attributes.md.
+
+Appointment representa la asociación entre Patient y Doctor,
+ya que dicha relación contiene atributos propios: fecha y estado.
 */
 
 
@@ -99,74 +104,156 @@ Para cada columna debemos especificar:
 - Restricciones.
 - Valor predeterminado, cuando corresponda.
 
-TIPOS DE DATOS COMUNES:
+CRITERIOS GENERALES:
 
-- integer: números enteros.
-- bigint: números enteros de mayor capacidad.
-- varchar(n): texto de longitud variable limitada.
-- text: texto de longitud variable.
-- boolean: valores verdadero o falso.
-- date: fechas.
-- timestamp: fecha y hora.
-- numeric(p,s): números decimales de precisión definida.
+- integer: identificadores numéricos.
+- varchar(n): cadenas de texto con longitud limitada.
+- date: fecha de nacimiento.
+- timestamp: fecha y hora de la cita.
+- password_hash: se representa mediante varchar, no se almacena
+  una contraseña en texto plano.
 
-El siguiente bloque es un ejemplo didáctico.
-Sustituirlo por las entidades reales del proyecto.
+Los identificadores utilizan incremento automático.
 */
 
-Table nombre_tabla {
-  // Identificador único del registro.
+
+// Catálogo de especialidades médicas.
+Table specialties {
+  // Identificador único de la especialidad.
   id integer [primary key, increment]
 
-  // Atributo obligatorio.
-  nombre varchar(100) [not null]
+  // Nombre de la especialidad.
+  name varchar(100) [not null, unique]
 
-  // Atributo opcional.
-  descripcion text
-
-  // Valor predeterminado.
-  activo boolean [not null, default: true]
-
-  // Fecha y hora de creación.
-  created_at timestamp [not null, default: `now()`]
+  Note: 'Catálogo administrado por GERENCIA. Cada nombre de especialidad debe ser único.'
 }
 
 
-// ============================================================
-// 3. CLAVES PRIMARIAS (PRIMARY KEY)
-// ============================================================
+// Información de los médicos.
+Table doctors {
+  // Identificador único del médico.
+  id integer [primary key, increment]
+
+  // Nombre del médico.
+  first_name varchar(100) [not null]
+
+  // Apellido del médico.
+  last_name varchar(100) [not null]
+
+  // Cédula profesional única.
+  professional_license varchar(50) [not null, unique]
+
+  // Correo electrónico opcional.
+  email varchar(255)
+
+  // Especialidad a la que pertenece el médico.
+  specialty_id integer [not null]
+
+  Note: 'Cada médico pertenece obligatoriamente a una especialidad existente. Su registro y administración corresponden a GERENCIA.'
+}
+
+
+// Información de los pacientes.
+Table patients {
+  // Identificador único del paciente.
+  id integer [primary key, increment]
+
+  // Nombre del paciente.
+  first_name varchar(100) [not null]
+
+  // Apellido del paciente.
+  last_name varchar(100) [not null]
+
+  // Correo electrónico único.
+  email varchar(255) [not null, unique]
+
+  // Fecha de nacimiento.
+  birth_date date [not null]
+
+  // Teléfono opcional.
+  phone varchar(20)
+
+  Note: 'Almacena los datos personales de los pacientes. El correo electrónico identifica de forma única el registro.'
+}
+
+
+// Citas médicas.
+Table appointments {
+  // Identificador único de la cita.
+  id integer [primary key, increment]
+
+  // Paciente asociado a la cita.
+  patient_id integer [not null]
+
+  // Médico que atenderá la cita.
+  doctor_id integer [not null]
+
+  // Instante de inicio de la cita, almacenado con zona horaria.
+  start_at timestamptz [not null]
+
+  // Estado de la cita.
+  status appointment_status [not null, default: 'PROGRAMADA']
+
+  Indexes {
+    (doctor_id, start_at) [name: 'idx_appointments_doctor_start_at']
+    (patient_id, start_at) [name: 'idx_appointments_patient_start_at']
+    (status, start_at) [name: 'idx_appointments_status_start_at']
+  }
+
+  Note: 'Cada cita pertenece a un paciente y a un médico. La duración es fija de 30 minutos y no se almacena como columna. start_at representa un instante interpretado en America/Mexico_City y almacenado en UTC.'
+}
+
+
+// Cuentas de acceso al sistema.
+Table users {
+  // Identificador único de la cuenta.
+  id integer [primary key, increment]
+
+  // Correo electrónico utilizado para acceder al sistema.
+  email varchar(255) [not null, unique]
+
+  // Contraseña almacenada como hash.
+  password_hash varchar(255) [not null]
+
+  // Rol asignado a la cuenta.
+  role user_role [not null]
+
+  // Médico asociado cuando la cuenta tiene rol MEDICO.
+  // Es opcional para cuentas RECEPCIONISTA y GERENCIA.
+  doctor_id integer [unique]
+
+  Note: 'Las cuentas son creadas por GERENCIA. No existe registro público. Una cuenta MEDICO debe vincularse a un médico existente. Un médico puede tener como máximo una cuenta.'
+}
+
 
 /*
+============================================================
+3. CLAVES PRIMARIAS (PRIMARY KEY)
+============================================================
+
 OBJETIVO:
 Identificar de forma única cada registro de una tabla.
 
 CARACTERÍSTICAS:
 - No admite valores duplicados.
 - No admite valores NULL.
-- Puede estar formada por una o varias columnas.
+- Cada tabla utiliza una clave primaria simple.
 
-CLAVE SIMPLE:
-id integer [primary key]
+JUSTIFICACIÓN:
+Se utiliza un identificador numérico autoincremental para cada
+entidad. Esto permite identificar los registros sin depender
+de atributos que podrían cambiar, como nombres o correos.
 
-CLAVE COMPUESTA:
-Se define mediante un bloque Indexes con la opción pk.
+CLAVES PRIMARIAS:
 
-Una clave compuesta se utiliza cuando la combinación de varios
-atributos identifica de manera única un registro.
+- specialties.id
+- doctors.id
+- patients.id
+- appointments.id
+- users.id
 
-La selección de la clave primaria debe responder al análisis
-de identificadores realizado en 02_entities-and-attributes.md.
+No se requieren claves primarias compuestas en este modelo.
 */
-
-Table ejemplo_clave_compuesta {
-  columna_a integer
-  columna_b integer
-  descripcion varchar(100)
-
-  Indexes {
-    (columna_a, columna_b) [pk]
-  }
-}
 
 
 // ============================================================
@@ -176,40 +263,32 @@ Table ejemplo_clave_compuesta {
 /*
 OBJETIVO:
 Representar relaciones entre tablas mediante referencias
-a claves primarias o claves únicas de otras tablas.
+a claves primarias de otras tablas.
 
-Una clave foránea garantiza la integridad referencial:
-el valor referenciado debe existir en la tabla relacionada,
-salvo que la columna permita NULL.
+RELACIONES:
 
-SINTAXIS:
+- doctors.specialty_id referencia specialties.id.
+- appointments.patient_id referencia patients.id.
+- appointments.doctor_id referencia doctors.id.
+- users.doctor_id referencia doctors.id.
 
-Ref: tabla_hija.columna_fk > tabla_padre.columna_pk
+JUSTIFICACIÓN:
 
-El símbolo > representa una relación de muchos a uno
-desde la tabla de origen hacia la tabla de destino.
+Una especialidad puede estar asociada a varios médicos,
+pero cada médico debe pertenecer a una especialidad.
 
-EJEMPLO:
-Cada pedido referencia a un cliente.
-Un cliente puede tener varios pedidos.
-*/
+Un paciente puede tener varias citas, pero cada cita
+pertenece a un paciente.
 
-Table customers {
-  id integer [primary key, increment]
-  name varchar(100) [not null]
-}
+Un médico puede atender varias citas, pero cada cita
+corresponde a un médico.
 
-Table orders {
-  id integer [primary key, increment]
-  customer_id integer [not null]
-}
+Una cuenta puede estar vinculada a un médico cuando su rol
+es MEDICO. La columna doctor_id es opcional y única.
 
-Ref: orders.customer_id > customers.id
-
-/*
 IMPORTANTE:
-Las claves foráneas deben corresponder con el modelo
-entidad-relación y las reglas de negocio.
+La obligatoriedad condicional de users.doctor_id según el rol
+debe validarse adicionalmente en PostgreSQL o en la aplicación.
 */
 
 
@@ -217,92 +296,140 @@ entidad-relación y las reglas de negocio.
 // 5. RELACIONES ENTRE TABLAS
 // ============================================================
 
-/*
-OBJETIVO:
-Definir las relaciones entre las tablas del modelo.
+// Una especialidad puede clasificar a varios médicos.
+Ref: doctors.specialty_id > specialties.id
 
-SÍMBOLOS DE RELACIÓN EN DBML:
+// Un paciente puede tener varias citas.
+Ref: appointments.patient_id > patients.id
 
-- >  Muchos a uno.
-- <  Uno a muchos.
-- -  Uno a uno.
-- <> Muchos a muchos.
+// Un médico puede atender varias citas.
+Ref: appointments.doctor_id > doctors.id
 
-EJEMPLOS DE SINTAXIS:
+// Un médico puede tener cero o una cuenta de usuario.
+// Cada cuenta MEDICO debe estar vinculada a un médico.
+// La condición del rol requiere validación adicional.
+Ref: users.doctor_id - doctors.id
 
-Ref: orders.customer_id > customers.id
-Ref: users.profile_id - profiles.id
-Ref: students.id <> courses.id
-
-IMPORTANTE:
-Las relaciones muchos a muchos normalmente se implementan
-mediante una tabla asociativa.
-
-En el modelo relacional debemos identificar las claves foráneas
-que conectan dicha tabla con las entidades originales.
-*/
-
-
-// ============================================================
-// 6. RESTRICCIONES DE UNICIDAD (UNIQUE)
-// ============================================================
 
 /*
+============================================================
+6. RESTRICCIONES DE UNICIDAD (UNIQUE)
+============================================================
+
 OBJETIVO:
 Evitar que determinados valores se repitan en una tabla.
 
-EJEMPLO:
-El correo electrónico de un usuario puede necesitar ser único.
+RESTRICCIONES DEFINIDAS:
 
-SINTAXIS:
+- patients.email:
+  Cada paciente debe tener un correo electrónico único.
 
-email varchar(150) [unique]
+- doctors.professional_license:
+  Cada médico debe tener una cédula profesional única.
 
-También podemos establecer unicidad sobre una combinación
-de columnas mediante un bloque Indexes.
+- specialties.name:
+  Cada especialidad debe tener un nombre único.
 
-La unicidad debe justificarse mediante una regla de negocio.
-No todos los atributos que parecen únicos deben convertirse
-automáticamente en restricciones UNIQUE.
+- users.email:
+  Cada cuenta del sistema debe tener un correo electrónico único.
+
+- users.doctor_id:
+  Un médico puede estar vinculado como máximo a una cuenta.
+
+JUSTIFICACIÓN:
+Estas restricciones responden a las reglas de negocio
+definidas en 01.0_business-rules.md.
+
+IMPORTANTE:
+No se establece UNIQUE para doctors.email porque el correo
+del médico es opcional y el negocio no definió que deba ser único.
 */
 
-Table ejemplo_unique {
-  id integer [primary key, increment]
-  email varchar(150) [not null, unique]
-}
-
-
-// ============================================================
-// 7. RESTRICCIONES Y VALORES PREDETERMINADOS
-// ============================================================
 
 /*
+============================================================
+7. RESTRICCIONES Y VALORES PREDETERMINADOS
+============================================================
+
 OBJETIVO:
 Documentar condiciones adicionales que deben cumplir las columnas.
 
-RESTRICCIONES HABITUALES:
+RESTRICCIONES REPRESENTADAS:
 
-- not null: exige un valor.
-- unique: evita duplicados.
-- default: establece un valor predeterminado.
-- check: permite expresar condiciones sobre los valores.
+- NOT NULL:
+  Se utiliza en los atributos obligatorios.
 
-EJEMPLO:
+- UNIQUE:
+  Se utiliza en los identificadores naturales definidos
+  como únicos por las reglas de negocio.
+
+- DEFAULT:
+  Una cita nueva comienza con estado PROGRAMADA.
+
+- ENUM:
+  Los estados de las citas y los roles de usuario utilizan
+  valores controlados.
+
+ESTADOS DE CITA:
+
+- PROGRAMADA
+- COMPLETADA
+- CANCELADA
+
+ROLES DE USUARIO:
+
+- RECEPCIONISTA
+- MEDICO
+- GERENCIA
 */
 
-Table ejemplo_restricciones {
-  id integer [primary key, increment]
-  status varchar(20) [not null, default: 'active']
-  age integer
+
+Enum appointment_status {
+  PROGRAMADA
+  COMPLETADA
+  CANCELADA
 }
 
-/*
-IMPORTANTE:
-La sintaxis y capacidades disponibles deben verificarse
-según la versión de DBML y el motor de base de datos objetivo.
+Enum user_role {
+  RECEPCIONISTA
+  MEDICO
+  GERENCIA
+}
 
-Las reglas complejas pueden requerir implementación adicional
-en PostgreSQL o en la aplicación.
+
+/*
+RESTRICCIONES QUE REQUIEREN IMPLEMENTACIÓN Y PRUEBAS POSTERIORES:
+
+1. La fecha de nacimiento del paciente no puede ser futura.
+
+2. El inicio de una cita no puede estar en el pasado.
+
+3. Vínculo entre rol y médico:
+   - Una cuenta MEDICO debe tener un doctor_id existente.
+   - Una cuenta RECEPCIONISTA o GERENCIA debe tener doctor_id nulo.
+   - Un médico puede tener como máximo una cuenta.
+
+4. Prevención de traslapes:
+   - No permitir traslapes entre citas activas del mismo médico.
+   - No permitir traslapes entre citas activas del mismo paciente.
+   - Las citas CANCELADAS no bloquean horarios.
+   - Las citas consecutivas están permitidas.
+
+5. Duración de las citas:
+   - Cada cita dura exactamente 30 minutos.
+
+6. Estados:
+   - Una cita nueva comienza como PROGRAMADA.
+   - Solo se permiten las transiciones PROGRAMADA -> COMPLETADA
+     y PROGRAMADA -> CANCELADA.
+   - COMPLETADA y CANCELADA son estados finales.
+
+7. El inicio de la cita debe interpretarse en America/Mexico_City
+   y almacenarse como un instante normalizado en UTC. La aplicación
+   es responsable de convertir correctamente la fecha y hora recibidas.
+
+Estas restricciones deberán implementarse y probarse en las etapas
+de desarrollo del esquema PostgreSQL y de la lógica de negocio de la API.
 */
 
 
@@ -315,34 +442,24 @@ OBJETIVO:
 Documentar índices que podrían mejorar el rendimiento
 de consultas frecuentes.
 
-Un índice permite localizar registros de manera más eficiente
-en determinadas operaciones.
+ÍNDICES PROPUESTOS:
 
-EJEMPLO:
-*/
+- appointments(doctor_id, start_at):
+  Apoya la agenda médica por rango de fechas.
 
-Table ejemplo_indices {
-  id integer [primary key, increment]
-  email varchar(150)
-  created_at timestamp
+- appointments(patient_id, start_at):
+  Apoya el historial de citas del paciente.
 
-  Indexes {
-    (email)
-    (created_at)
-  }
-}
+- appointments(status, start_at):
+  Apoya las consultas por estado y fecha.
 
-/*
-Los índices también pueden definirse sobre varias columnas.
+Son índices propuestos para las consultas identificadas.
+Su conveniencia definitiva deberá comprobarse mediante consultas
+y pruebas de rendimiento.
 
 IMPORTANTE:
-No debemos crear índices indiscriminadamente.
-
-Cada índice consume espacio y puede incrementar el costo
-de operaciones INSERT, UPDATE y DELETE.
-
-La selección de índices debe responder a las consultas
-que esperamos ejecutar y a las necesidades de rendimiento.
+Las restricciones UNIQUE generan sus propios índices
+en PostgreSQL. No se duplican aquí.
 */
 
 
@@ -354,21 +471,25 @@ que esperamos ejecutar y a las necesidades de rendimiento.
 OBJETIVO:
 Agregar explicaciones sobre tablas y columnas cuando sea necesario.
 
-DBML permite utilizar notas para documentar elementos del modelo.
+DECISIONES IMPORTANTES DEL MODELO:
 
-EJEMPLO:
-*/
+- Appointment.start_at almacena el instante de inicio.
+- La zona horaria de interpretación para el usuario es
+  America/Mexico_City.
+- La aplicación convierte y almacena los instantes en UTC.
+- La duración de 30 minutos es fija.
+- La hora de finalización se calcula, no se almacena.
+- Appointment.status representa el estado actual de la cita.
+- User.doctor_id solo corresponde a cuentas con rol MEDICO.
 
-Table users_documented {
-  id integer [primary key, increment]
-  email varchar(150) [unique, not null, note: 'Correo de acceso']
+ATRIBUTOS NO ALMACENADOS:
 
-  Note: 'Almacena los usuarios registrados en el sistema.'
-}
+- end_at: se calcula sumando 30 minutos a start_at.
+- duration: es una regla fija del negocio.
+- rentabilidad: fuera del alcance porque no existen datos financieros.
 
-/*
-Las notas ayudan a comprender el propósito de los datos
-sin modificar la estructura lógica de la tabla.
+Estas decisiones evitan almacenar información redundante
+y mantienen el modelo alineado con los documentos anteriores.
 */
 
 
@@ -388,16 +509,35 @@ CRITERIOS DE VALIDACIÓN:
 - Cada tabla tiene una clave primaria definida.
 - Las claves foráneas apuntan a tablas y columnas existentes.
 - Las relaciones corresponden al diagrama entidad-relación.
-- Las relaciones muchos a muchos están resueltas mediante
-  tablas asociativas cuando corresponde.
 - Las restricciones UNIQUE y NOT NULL tienen justificación.
 - Los tipos de datos son adecuados.
-- Las reglas de negocio están representadas cuando corresponde.
+- Los estados y roles están controlados.
+- La cuenta MEDICO tiene una relación condicional con Doctor.
+- Los índices propuestos corresponden a consultas frecuentes y su
+  conveniencia deberá comprobarse mediante pruebas de rendimiento.
 - No existen relaciones contradictorias con el modelo conceptual.
+
+RESTRICCIONES QUE REQUIEREN IMPLEMENTACIÓN Y PRUEBAS POSTERIORES:
+
+- Validación de fecha de nacimiento.
+- Validación de fecha futura para citas.
+- Vínculo entre rol y médico: una cuenta MEDICO debe tener un
+  doctor_id existente; RECEPCIONISTA y GERENCIA deben tenerlo nulo;
+  y cada médico puede tener como máximo una cuenta.
+- Prevención de traslapes entre citas activas del mismo médico
+  y del mismo paciente. Las citas CANCELADAS no bloquean horarios
+  y las citas consecutivas están permitidas.
+- Duración fija de 30 minutos por cita.
+- Estados: una cita nueva comienza como PROGRAMADA; solo se permiten
+  las transiciones PROGRAMADA -> COMPLETADA y PROGRAMADA -> CANCELADA;
+  COMPLETADA y CANCELADA son estados finales.
+- Interpretación de fechas en America/Mexico_City y almacenamiento
+  de instantes en UTC; la aplicación debe convertir correctamente
+  la fecha y hora recibidas.
 
 IMPORTANTE:
 La validación del modelo DBML no sustituye la ejecución
-y prueba del esquema SQL en PostgreSQL.
+y prueba del esquema SQL en PostgreSQL y de la lógica de negocio de la API.
 */
 
 
@@ -409,18 +549,21 @@ y prueba del esquema SQL en PostgreSQL.
 Al finalizar esta etapa debemos contar con una descripción lógica
 de la base de datos que incluya:
 
-- Tablas.
-- Columnas.
-- Tipos de datos.
+- Cinco tablas.
+- Columnas y tipos de datos.
 - Claves primarias.
 - Claves foráneas.
 - Relaciones.
-- Restricciones.
+- Restricciones de unicidad.
+- Campos obligatorios y opcionales.
+- Valores predeterminados.
+- Roles y estados controlados.
 - Índices justificados.
+- Notas sobre reglas que requieren implementación adicional.
 
 ENTREGABLE:
 Modelo relacional documentado en formato DBML.
 
 SIGUIENTE ETAPA:
-05_normalization.md
+05.0_normalization.md
 */
