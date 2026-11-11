@@ -60,14 +60,20 @@ La duración de la cita es fija y su hora de finalización se calcula a partir d
 
 ## 5. Arquitectura de la aplicación
 
-Se utilizará una arquitectura **MVC modular con capa de servicios**:
+Se utilizará una arquitectura **MVC modular por capas**, complementada con servicios y middlewares. Al ser una API, las respuestas HTTP/JSON cumplen el papel de salida para los clientes en lugar de vistas HTML tradicionales.
 
 - **Routes:** definen los endpoints.
 - **Middlewares:** autenticación, autorización y validaciones.
 - **Controllers:** reciben solicitudes y construyen respuestas HTTP.
 - **Services:** implementan las reglas de negocio y coordinan operaciones.
-- **Models / Prisma:** gestionan el acceso y persistencia de datos.
+- **Models:** encapsulan las consultas y operaciones de persistencia.
+- **Prisma:** define el esquema, genera los tipos y el cliente de base de datos utilizado por los modelos.
 - **Schemas:** validan los datos de entrada con Zod.
+- **Config:** centraliza variables de entorno y conexiones.
+
+Los servicios no acceden directamente a Prisma: invocan la capa `models/`, que contiene las operaciones de persistencia. Prisma ya genera los modelos y tipos a partir de `prisma/schema.prisma`; la carpeta `models/` es una capa propia de acceso a datos y no duplica esas definiciones.
+
+Esta separación sigue la recomendación de organizar los modelos en una carpeta `models/` y mantiene las responsabilidades claras: los controladores gestionan HTTP, los servicios aplican reglas de negocio y los modelos encapsulan las consultas con Prisma. También facilita probar servicios y persistencia de forma independiente. La estructura puede ampliarse por módulo conforme se agreguen funcionalidades.
 
 Módulos funcionales: Auth, Users, Patients, Doctors, Specialties, Appointments y Reports.
 
