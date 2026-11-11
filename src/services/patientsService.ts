@@ -1,30 +1,24 @@
 
 import { prisma } from "../config/prisma.js";
+import * as patientsModel from "../models/patientsModel.js";
 import type { CreatePatientInput } from "../schemas/patientsSchema.js";
 
+const patientModel = patientsModel.createPatientsModel(prisma);
+
 export const createPatient = (data: CreatePatientInput) => {
-  return prisma.patient.create({
-    data: {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      birthDate: data.birthDate,
-      phone: data.phone ?? null,
-    },
+  return patientModel.createPatient({
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email,
+    birthDate: data.birthDate,
+    phone: data.phone ?? null,
   });
 };
 
 export const getAllPatients = () => {
-  return prisma.patient.findMany({
-    orderBy: [
-      { lastName: "asc" },
-      { firstName: "asc" },
-    ],
-  });
+  return patientModel.getAllPatients();
 };
 
 export const getPatientById = (id: string) => {
-  return prisma.patient.findUnique({
-    where: { id },
-  });
+  return patientModel.getPatientById(id);
 };

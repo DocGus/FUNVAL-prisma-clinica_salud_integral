@@ -60,20 +60,26 @@ La duración de la cita es fija y su hora de finalización se calcula a partir d
 
 ## 5. Arquitectura de la aplicación
 
-Se utilizará una arquitectura **MVC modular con capa de servicios**:
+Se utilizará una arquitectura **MVC modular por capas**, complementada con servicios y middlewares. Al ser una API, las respuestas HTTP/JSON cumplen el papel de salida para los clientes en lugar de vistas HTML tradicionales.
 
 - **Routes:** definen los endpoints.
 - **Middlewares:** autenticación, autorización y validaciones.
 - **Controllers:** reciben solicitudes y construyen respuestas HTTP.
 - **Services:** implementan las reglas de negocio y coordinan operaciones.
-- **Models / Prisma:** gestionan el acceso y persistencia de datos.
+- **Models:** encapsulan las consultas y operaciones de persistencia.
+- **Prisma:** define el esquema, genera los tipos y el cliente de base de datos utilizado por los modelos.
 - **Schemas:** validan los datos de entrada con Zod.
+- **Config:** centraliza variables de entorno y conexiones.
+
+Los servicios no acceden directamente a Prisma: invocan la capa `models/`, que contiene las operaciones de persistencia. Prisma ya genera los modelos y tipos a partir de `prisma/schema.prisma`; la carpeta `models/` es una capa propia de acceso a datos y no duplica esas definiciones.
+
+Esta separación sigue la recomendación de organizar los modelos en una carpeta `models/` y mantiene las responsabilidades claras: los controladores gestionan HTTP, los servicios aplican reglas de negocio y los modelos encapsulan las consultas con Prisma. También facilita probar servicios y persistencia de forma independiente. La estructura puede ampliarse por módulo conforme se agreguen funcionalidades.
 
 Módulos funcionales: Auth, Users, Patients, Doctors, Specialties, Appointments y Reports.
 
 ### Tecnologías
 
-Node.js, TypeScript, Express 5, PostgreSQL, Prisma ORM 7, Zod, JWT, bcryptjs, Vitest, Supertest y Swagger UI.
+Node.js, TypeScript, Express 5, PostgreSQL, Prisma ORM 7, Zod, Vitest, Supertest y Swagger UI. JWT y bcryptjs forman parte de las decisiones previstas para el módulo de autenticación; su integración se realizará durante esa etapa.
 
 Las operaciones de citas contemplarán validación de traslapes y protección frente a solicitudes concurrentes. Los reportes utilizarán consultas especializadas de Prisma y SQL parametrizado cuando corresponda.
 
@@ -136,3 +142,59 @@ El análisis y diseño se encuentra en `docs/`:
 - `04.0_relation-model.dbml`: modelo relacional.
 - `05.0_normalization.md`: análisis de normalización.
 - `06.0_architecture.md`: arquitectura y decisiones técnicas.
+
+## 9. Adaptaciones respecto a los ejercicios de FUNVAL
+
+Este proyecto toma como referencia los ejercicios prácticos desarrollados durante el programa FullStack FUNVAL. Sus ejemplos se adaptan a las tecnologías, arquitectura y reglas de negocio definidas para Clínica Salud Integral, en lugar de copiarse sin considerar el contexto.
+
+El objetivo es aplicar los conceptos aprendidos en un sistema más cercano a una aplicación real, conservando la coherencia del código y evitando cambios arquitectónicos que no aporten valor.
+
+### 9.1. Identificadores UUID
+
+Los ejercicios de referencia pueden utilizar identificadores numéricos. En este proyecto, los modelos de Prisma definen los identificadores como UUID (`String` en TypeScript y `@db.Uuid` en PostgreSQL).
+
+Los UUID no dependen de una secuencia numérica y son menos predecibles que los identificadores incrementales. Esto no sustituye la autenticación ni la autorización.
+
+### 9.2. Nomenclatura de la fecha de la cita
+
+En lugar de `scheduledAt`, el modelo utiliza `startAt` para identificar la fecha y hora de inicio de una cita. Esta denominación coincide con el modelo de datos del proyecto y se persiste como `DateTime` con zona horaria en PostgreSQL.
+
+### 9.3. Nombre del campo de contraseña
+
+El modelo `User` utiliza `passwordHash` para expresar que se almacenará un hash, no la contraseña original. El campo ya está definido en el esquema Prisma; el algoritmo y el flujo de hashing se integrarán con el módulo de autenticación. Nunca se almacenarán contraseñas en texto plano.
+
+### 9.4. Convenciones de nomenclatura de archivos
+
+Los ejercicios pueden usar nombres como `patient.model.ts`, `auth.middleware.ts` y `auth.routes.ts`. El proyecto conserva la convención existente, por ejemplo `patientsModel.ts`, `patientsService.ts` y `patientsController.ts`.
+
+Ambas convenciones son válidas; mantener una nomenclatura uniforme dentro del repositorio facilita la lectura y el mantenimiento.
+
+### 9.5. Exportación de Prisma
+
+La instancia compartida de Prisma se exporta con nombre (`prisma`) desde `src/config/prisma.ts`. Se conserva esta convención en lugar de cambiarla a una exportación predeterminada, para mantener consistentes las importaciones existentes.
+
+### 9.6. Registro y administración de cuentas
+
+El diseño del sistema no contempla un endpoint de registro público. Las cuentas serán creadas por GERENCIA según las reglas de negocio; la primera cuenta GERENCIA se provisionará mediante un procedimiento controlado de inicialización.
+
+La creación de cuentas y el flujo de inicialización son decisiones de arquitectura previstas; sus endpoints y proceso se implementarán en la etapa correspondiente.
+
+### 9.7. Relación entre usuarios y médicos
+
+`User` y `Doctor` representan conceptos distintos: una cuenta de acceso y un registro profesional. El esquema Prisma incorpora una relación opcional mediante `doctorId`, con unicidad para que un médico no tenga más de una cuenta. Las reglas requieren que las cuentas `MEDICO` tengan un médico asociado y que los demás roles no lo tengan.
+
+### 9.8. Configuración de JWT
+
+La configuración existente centraliza y valida variables de entorno con Zod mediante `src/config/env.ts`. Cuando se implemente JWT, `JWT_SECRET` deberá incorporarse a ese esquema; actualmente esa variable y el flujo de autenticación aún no están implementados.
+
+### 9.9. Documentación de seguridad en Swagger
+
+Swagger UI ya está integrado para servir la documentación de la API. El diseño arquitectónico prevé documentar las rutas protegidas con OpenAPI HTTP Bearer para JWT; el esquema de seguridad y las rutas autenticadas se completarán junto con el módulo de autenticación.
+
+### 9.10. Integración de middlewares
+
+La arquitectura prevista organiza rutas, middlewares, controladores, servicios y modelos por responsabilidad. Los middlewares de autenticación y autorización se integrarán en las rutas protegidas al implementar los módulos correspondientes; las rutas actuales de pacientes todavía no representan ese flujo completo.
+
+### Criterio general de adaptación
+
+Los ejercicios de FUNVAL sirven como referencia de aprendizaje e implementación. Se conservan las decisiones de arquitectura, nomenclatura, seguridad y reglas de negocio del proyecto cuando son coherentes con sus objetivos. Las adaptaciones permiten integrar los conocimientos del curso manteniendo la consistencia, la mantenibilidad y la evolución del sistema.
