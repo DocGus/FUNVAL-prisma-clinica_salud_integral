@@ -2,14 +2,19 @@
 import { Router, type Router as ExpressRouter } from "express";
 import {
   createPatient,
-  getAllPatients,
   getPatientById,
 } from "../controllers/patientsController.js";
+import { authorize } from "../middlewares/authorize.js";
+import { verifyToken } from "../middlewares/verifyToken.js";
 
 const router: ExpressRouter = Router();
 
-router.post("/", createPatient);
-router.get("/", getAllPatients);
-router.get("/:id", getPatientById);
+router.post("/", verifyToken, authorize("RECEPCIONISTA"), createPatient);
+router.get(
+  "/:id",
+  verifyToken,
+  authorize("RECEPCIONISTA"),
+  getPatientById,
+);
 
 export default router;
