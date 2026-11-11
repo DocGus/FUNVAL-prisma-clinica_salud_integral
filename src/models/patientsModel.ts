@@ -1,5 +1,19 @@
 import type { Patient, Prisma } from "../../generated/prisma/client.js";
 
+type PatientWithHistory = Prisma.PatientGetPayload<{
+  include: {
+    appointments: {
+      include: {
+        doctor: {
+          include: {
+            specialty: true;
+          };
+        };
+      };
+    };
+  };
+}>;
+
 type PatientsModelClient = {
   patient: {
     create(args: { data: Prisma.PatientCreateInput }): Promise<Patient>;
@@ -8,7 +22,19 @@ type PatientsModelClient = {
     }): Promise<Patient[]>;
     findUnique(args: {
       where: Prisma.PatientWhereUniqueInput;
-    }): Promise<Patient | null>;
+      include: {
+        appointments: {
+          include: {
+            doctor: {
+              include: {
+                specialty: true;
+              };
+            };
+          };
+          orderBy: Prisma.AppointmentOrderByWithRelationInput;
+        };
+      };
+    }): Promise<PatientWithHistory | null>;
   };
 };
 
@@ -29,6 +55,20 @@ export const createPatientsModel = (client: PatientsModelClient) => ({
   getPatientById: (id: string) => {
     return client.patient.findUnique({
       where: { id },
+      include: {
+        appointments: {
+          include: {
+            doctor: {
+              include: {
+                specialty: true,
+              },
+            },
+          },
+          orderBy: {
+            startAt: "desc",
+          },
+        },
+      },
     });
   },
 });
