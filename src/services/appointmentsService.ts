@@ -47,6 +47,36 @@ export const createAppointment = async (input: CreateAppointmentInput) => {
   });
 };
 
+export const resolveAuthenticatedDoctorId = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, doctorId: true },
+  });
+
+  if (!user) {
+    throw new Error("Usuario no autorizado");
+  }
+
+  if (user.role !== "MEDICO") {
+    throw new Error("No tienes permisos para realizar esta acción");
+  }
+
+  if (!user.doctorId) {
+    throw new Error("El usuario médico no está asociado a un doctor");
+  }
+
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: user.doctorId },
+    select: { id: true },
+  });
+
+  if (!doctor) {
+    throw new Error("El médico autenticado no existe");
+  }
+
+  return user.doctorId;
+};
+
 export const getDoctorAppointments = async (
   doctorId: string,
   from?: Date,
@@ -67,11 +97,16 @@ export const getDoctorAppointments = async (
 export const updateAppointmentStatus = async (
   id: string,
   status: "COMPLETADA" | "CANCELADA",
+  doctorId?: string,
 ) => {
   const appointment = await appointmentsModel.getAppointmentById(id);
 
   if (!appointment) {
     throw new Error("Cita no encontrada");
+  }
+
+  if (doctorId && appointment.doctorId !== doctorId) {
+    throw new Error("No tienes permisos para modificar esta cita");
   }
 
   return appointmentsModel.updateAppointmentStatus(id, status);

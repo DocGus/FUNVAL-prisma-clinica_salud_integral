@@ -75,10 +75,28 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
   }
 
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Token inválido o ausente",
+      });
+    }
+
+    const authenticatedDoctorId = await appointmentsService.resolveAuthenticatedDoctorId(
+      req.user.id,
+    );
+
+    if (doctorValidation.data !== authenticatedDoctorId) {
+      return res.status(403).json({
+        message: "No tienes permisos para consultar la agenda de este médico",
+      });
+    }
+
+    const from = queryValidation.data.from;
+    const to = queryValidation.data.to;
     const appointments = await appointmentsService.getDoctorAppointments(
-      doctorValidation.data,
-      queryValidation.data.from,
-      queryValidation.data.to,
+      authenticatedDoctorId,
+      from && to ? new Date(from) : undefined,
+      from && to ? new Date(to) : undefined,
     );
 
     return res.status(200).json({
@@ -88,6 +106,20 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
     if (error instanceof Error && error.message === "Médico no encontrado") {
       return res.status(404).json({
         message: "Médico no encontrado",
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      [
+        "Usuario no autorizado",
+        "No tienes permisos para realizar esta acción",
+        "El usuario médico no está asociado a un doctor",
+        "El médico autenticado no existe",
+      ].includes(error.message)
+    ) {
+      return res.status(403).json({
+        message: "No tienes permisos para consultar la agenda de este médico",
       });
     }
 
@@ -118,9 +150,20 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
   }
 
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Token inválido o ausente",
+      });
+    }
+
+    const authenticatedDoctorId = await appointmentsService.resolveAuthenticatedDoctorId(
+      req.user.id,
+    );
+
     const appointment = await appointmentsService.updateAppointmentStatus(
       appointmentValidation.data,
       statusValidation.data.status,
+      authenticatedDoctorId,
     );
 
     return res.status(200).json({
@@ -131,6 +174,21 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
     if (error instanceof Error && error.message === "Cita no encontrada") {
       return res.status(404).json({
         message: "Cita no encontrada",
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      [
+        "Usuario no autorizado",
+        "No tienes permisos para realizar esta acción",
+        "El usuario médico no está asociado a un doctor",
+        "El médico autenticado no existe",
+        "No tienes permisos para modificar esta cita",
+      ].includes(error.message)
+    ) {
+      return res.status(403).json({
+        message: "No tienes permisos para modificar esta cita",
       });
     }
 

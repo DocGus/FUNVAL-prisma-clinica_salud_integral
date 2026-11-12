@@ -43,14 +43,16 @@ export const createAppointmentsModel = (client: AppointmentsModelClient) => ({
     from?: Date,
     to?: Date,
   ) => {
+    const hasDateRange = Boolean(from && to);
+
     return client.appointment.findMany({
       where: {
         doctorId,
-        ...(from || to
+        ...(hasDateRange
           ? {
               scheduledAt: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {}),
+                gte: from,
+                lte: to,
               },
             }
           : {}),
