@@ -121,7 +121,7 @@ describe("patients model", () => {
             },
           },
           orderBy: {
-            startAt: "desc",
+            scheduledAt: "desc",
           },
         },
       },
@@ -157,7 +157,7 @@ describe("patients model", () => {
             },
           },
           orderBy: {
-            startAt: "desc",
+            scheduledAt: "desc",
           },
         },
       },

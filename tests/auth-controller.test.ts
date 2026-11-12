@@ -1,16 +1,31 @@
 import express from "express";
+import jwt from "jsonwebtoken";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   login: vi.fn(),
+  register: vi.fn(),
+  jwtSecret: "test-secret-with-at-least-thirty-two-characters",
+}));
+
+vi.mock("../src/config/env.js", () => ({
+  env: { JWT_SECRET: mocks.jwtSecret },
 }));
 
 vi.mock("../src/services/authService.js", () => ({
   login: mocks.login,
+  registerUser: mocks.register,
 }));
 
 import authRoutes from "../src/routes/authRoutes.js";
+
+const createToken = (role: "GERENCIA" | "MEDICO" | "RECEPCIONISTA") =>
+  jwt.sign(
+    { sub: "11111111-1111-4111-8111-111111111111", role },
+    mocks.jwtSecret,
+    { expiresIn: "8h" },
+  );
 
 const app = express();
 app.use(express.json());
@@ -94,5 +109,74 @@ describe("Auth controller", () => {
       message: "Error interno al iniciar sesión",
     });
     expect(response.text).not.toContain("internal detail");
+  });
+
+  it("returns 201 when a GERENCIA account can register a valid user", async () => {
+    mocks.register.mockResolvedValue({
+      id: "new-user-id",
+      email: "recepcionista@example.com",
+      role: "RECEPCIONISTA",
+      doctorId: null,
+    });
+
+    const response = await request(app)
+      .post("/api/auth/register")
+      .set("Authorization", `Bearer ${createToken("GERENCIA")}`)
+      .send({
+        email: "recepcionista@example.com",
+        password: "supersecure123",
+        role: "RECEPCIONISTA",
+      })
+      .expect(201);
+
+    expect(response.body).toEqual({
+      message: "Usuario registrado correctamente",
+      data: {
+        id: "new-user-id",
+        email: "recepcionista@example.com",
+        role: "RECEPCIONISTA",
+        doctorId: null,
+      },
+    });
+    expect(mocks.register).toHaveBeenCalledWith({
+      email: "recepcionista@example.com",
+      password: "supersecure123",
+      role: "RECEPCIONISTA",
+    });
+  });
+
+  it("rejects registration without a token", async () => {
+    await request(app)
+      .post("/api/auth/register")
+      .send({
+        email: "recepcionista@example.com",
+        password: "supersecure123",
+        role: "RECEPCIONISTA",
+      })
+      .expect(401);
+  });
+
+  it("returns 403 when the token belongs to a non-GERENCIA role", async () => {
+    await request(app)
+      .post("/api/auth/register")
+      .set("Authorization", `Bearer ${createToken("RECEPCIONISTA")}`)
+      .send({
+        email: "recepcionista@example.com",
+        password: "supersecure123",
+        role: "RECEPCIONISTA",
+      })
+      .expect(403);
+  });
+
+  it("returns 400 when register payload is invalid", async () => {
+    await request(app)
+      .post("/api/auth/register")
+      .set("Authorization", `Bearer ${createToken("GERENCIA")}`)
+      .send({
+        email: "invalid-email",
+        password: "short",
+        role: "INVALID",
+      })
+      .expect(400);
   });
 });

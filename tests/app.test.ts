@@ -25,6 +25,10 @@ vi.mock("../src/services/doctorsService.js", () => ({
   getDoctors: vi.fn(),
 }));
 
+vi.mock("../src/services/specialtiesService.js", () => ({
+  getSpecialties: vi.fn().mockResolvedValue([]),
+}));
+
 import { app } from "../src/app.js";
 
 describe("HTTP application", () => {
@@ -46,6 +50,12 @@ describe("HTTP application", () => {
     await request(app)
       .get("/api/doctors")
       .expect(401);
+  });
+
+  it("registers the public specialties catalog endpoint", async () => {
+    await request(app)
+      .get("/api/specialties")
+      .expect(200, { data: [] });
   });
 
   it("serves the Swagger UI documentation", async () => {
@@ -72,6 +82,7 @@ describe("HTTP application", () => {
     expect(response.text).toContain("/api/auth");
     expect(response.text).toContain("/api/patients");
     expect(response.text).toContain("/api/doctors");
+    expect(response.text).toContain("/api/specialties");
   });
 
   it("returns 404 for an unknown route", async () => {

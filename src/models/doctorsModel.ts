@@ -28,9 +28,22 @@ type DoctorsModelClient = {
 };
 
 export const createDoctorsModel = (client: DoctorsModelClient) => ({
-  getDoctors: (specialtyId?: string) => {
+  getDoctors: (specialty?: string) => {
     return client.doctor.findMany({
-      ...(specialtyId ? { where: { specialtyId } } : {}),
+      ...(specialty
+        ? {
+            where: {
+              specialty: {
+                is: {
+                  name: {
+                    equals: specialty,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+          }
+        : {}),
       select: doctorDirectorySelect,
     });
   },

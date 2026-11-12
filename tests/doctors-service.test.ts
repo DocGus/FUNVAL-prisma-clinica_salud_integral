@@ -30,13 +30,13 @@ describe("doctors service", () => {
     expect(mocks.getDoctors).toHaveBeenCalledWith(undefined);
   });
 
-  it("delegates the specialty filter to the model", async () => {
+  it("delegates the specialty-name filter to the model", async () => {
     const doctors = [{ id: "doctor-id" }];
     mocks.getDoctors.mockResolvedValue(doctors);
 
     await expect(
-      doctorsService.getDoctors("specialty-id"),
+      doctorsService.getDoctors("Medicina General"),
     ).resolves.toEqual(doctors);
-    expect(mocks.getDoctors).toHaveBeenCalledWith("specialty-id");
+    expect(mocks.getDoctors).toHaveBeenCalledWith("Medicina General");
   });
 });

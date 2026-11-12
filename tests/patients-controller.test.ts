@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   jwtSecret: "test-secret-with-at-least-thirty-two-characters",
   createPatient: vi.fn(),
+  getAllPatients: vi.fn(),
   getPatientById: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock("../src/config/env.js", () => ({
 
 vi.mock("../src/services/patientsService.js", () => ({
   createPatient: mocks.createPatient,
+  getAllPatients: mocks.getAllPatients,
   getPatientById: mocks.getPatientById,
 }));
 
@@ -120,7 +122,8 @@ describe("Patients controller", () => {
       appointments: [
         {
           id: "c13c3378-e2a3-4408-b19e-4c9a7fd661a8",
-          startAt: "2026-11-12T16:00:00.000Z",
+          scheduledAt: "2026-11-12T16:00:00.000Z",
+          reason: null,
           status: "COMPLETADA",
           doctor: {
             id: "d13c3378-e2a3-4408-b19e-4c9a7fd661a8",
@@ -131,7 +134,8 @@ describe("Patients controller", () => {
         },
         {
           id: "f13c3378-e2a3-4408-b19e-4c9a7fd661a8",
-          startAt: "2026-11-13T16:00:00.000Z",
+          scheduledAt: "2026-11-13T16:00:00.000Z",
+          reason: null,
           status: "CANCELADA",
           doctor: {
             id: "d13c3378-e2a3-4408-b19e-4c9a7fd661a8",
@@ -157,6 +161,20 @@ describe("Patients controller", () => {
     expect(response.body.data.appointments[0].doctor.specialty.name).toBe("General");
   });
 
+  it("returns 401 when listing patients without a token", async () => {
+    await request(app).get("/api/patients").expect(401);
+  });
+
+  it.each(["MEDICO", "GERENCIA"] as const)(
+    "returns 403 when %s attempts to list patients",
+    async (role) => {
+      await request(app)
+        .get("/api/patients")
+        .set("Authorization", `Bearer ${createToken(role)}`)
+        .expect(403);
+    },
+  );
+
   it("returns 401 when consulting a patient record without a token", async () => {
     await request(app)
       .get(`/api/patients/${patient.id}`)
@@ -177,11 +195,15 @@ describe("Patients controller", () => {
     },
   );
 
-  it("returns 404 for the removed patient list endpoint", async () => {
-    await request(app)
+  it("returns the patient list with a valid RECEPCIONISTA token", async () => {
+    mocks.getAllPatients.mockResolvedValue([]);
+
+    const response = await request(app)
       .get("/api/patients")
       .set("Authorization", `Bearer ${createToken("RECEPCIONISTA")}`)
-      .expect(404);
+      .expect(200);
+
+    expect(response.body).toEqual({ data: [] });
   });
 
   it("returns 400 when the patient ID is not a valid UUID", async () => {

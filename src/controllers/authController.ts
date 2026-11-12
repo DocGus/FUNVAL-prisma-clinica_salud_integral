@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { loginSchema } from "../schemas/authSchema.js";
+import { loginSchema, registerSchema } from "../schemas/authSchema.js";
 import * as authService from "../services/authService.js";
 
 const INVALID_CREDENTIALS_MESSAGE = "Credenciales inválidas";
@@ -35,6 +35,50 @@ export const login = async (req: Request, res: Response) => {
 
     return res.status(500).json({
       message: "Error interno al iniciar sesión",
+    });
+  }
+};
+
+export const register = async (req: Request, res: Response) => {
+  const validation = registerSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      message: "Datos del usuario inválidos",
+      errors: validation.error.issues,
+    });
+  }
+
+  try {
+    const user = await authService.registerUser(validation.data);
+
+    return res.status(201).json({
+      message: "Usuario registrado correctamente",
+      data: user,
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Ya existe un usuario con ese correo electrónico"
+    ) {
+      return res.status(409).json({
+        message: "Ya existe un usuario con ese correo electrónico",
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "El doctor especificado no existe"
+    ) {
+      return res.status(404).json({
+        message: "El doctor especificado no existe",
+      });
+    }
+
+    console.error("Error al registrar usuario:", error);
+
+    return res.status(500).json({
+      message: "Error interno al registrar usuario",
     });
   }
 };

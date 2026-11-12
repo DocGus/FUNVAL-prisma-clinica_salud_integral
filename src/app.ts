@@ -2,9 +2,12 @@
 import cors from "cors";
 import express, { type Express } from "express";
 import swaggerUi from "swagger-ui-express";
+import appointmentsRoutes from "./routes/appointmentsRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import doctorsRoutes from "./routes/doctorsRoutes.js";
 import patientsRoutes from "./routes/patientsRoutes.js";
+import reportsRoutes from "./routes/reportsRoutes.js";
+import specialtiesRoutes from "./routes/specialtiesRoutes.js";
 
 const apiDocument = {
   openapi: "3.0.3",
@@ -68,6 +71,88 @@ const apiDocument = {
           },
         },
       },
+      RegisterRequest: {
+        type: "object",
+        required: ["email", "password", "role"],
+        properties: {
+          email: { type: "string", format: "email" },
+          password: { type: "string", minLength: 8 },
+          role: {
+            type: "string",
+            enum: ["RECEPCIONISTA", "MEDICO", "GERENCIA"],
+          },
+          doctorId: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+          },
+        },
+        additionalProperties: false,
+      },
+      UserPublicData: {
+        type: "object",
+        required: ["id", "email", "role", "doctorId"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          email: { type: "string", format: "email" },
+          role: {
+            type: "string",
+            enum: ["RECEPCIONISTA", "MEDICO", "GERENCIA"],
+          },
+          doctorId: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+          },
+        },
+      },
+      AppointmentCreateRequest: {
+        type: "object",
+        required: ["patientId", "doctorId", "scheduledAt"],
+        properties: {
+          patientId: { type: "string", format: "uuid" },
+          doctorId: { type: "string", format: "uuid" },
+          scheduledAt: { type: "string", format: "date-time" },
+          reason: { type: "string", maxLength: 500, nullable: true },
+        },
+        additionalProperties: false,
+      },
+      AppointmentStatusUpdateRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: {
+            type: "string",
+            enum: ["COMPLETADA", "CANCELADA"],
+          },
+        },
+        additionalProperties: false,
+      },
+      AppointmentWithPatient: {
+        type: "object",
+        required: ["id", "patientId", "doctorId", "scheduledAt", "status", "patient"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          patientId: { type: "string", format: "uuid" },
+          doctorId: { type: "string", format: "uuid" },
+          scheduledAt: { type: "string", format: "date-time" },
+          reason: { type: "string", nullable: true },
+          status: {
+            type: "string",
+            enum: ["PROGRAMADA", "COMPLETADA", "CANCELADA"],
+          },
+          patient: {
+            type: "object",
+            required: ["id", "firstName", "lastName", "email"],
+            properties: {
+              id: { type: "string", format: "uuid" },
+              firstName: { type: "string" },
+              lastName: { type: "string" },
+              email: { type: "string", format: "email" },
+            },
+          },
+        },
+      },
       PatientCreateRequest: {
         type: "object",
         required: ["firstName", "lastName", "email", "birthDate"],
@@ -81,6 +166,14 @@ const apiDocument = {
         additionalProperties: false,
       },
       SpecialtySummary: {
+        type: "object",
+        required: ["id", "name"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          name: { type: "string" },
+        },
+      },
+      Specialty: {
         type: "object",
         required: ["id", "name"],
         properties: {
@@ -145,7 +238,7 @@ const apiDocument = {
                 "id",
                 "patientId",
                 "doctorId",
-                "startAt",
+                "scheduledAt",
                 "status",
                 "doctor",
               ],
@@ -153,7 +246,8 @@ const apiDocument = {
                 id: { type: "string", format: "uuid" },
                 patientId: { type: "string", format: "uuid" },
                 doctorId: { type: "string", format: "uuid" },
-                startAt: { type: "string", format: "date-time" },
+                scheduledAt: { type: "string", format: "date-time" },
+                reason: { type: "string", nullable: true },
                 status: {
                   type: "string",
                   enum: ["PROGRAMADA", "COMPLETADA", "CANCELADA"],
@@ -164,6 +258,25 @@ const apiDocument = {
               },
             },
           },
+        },
+      },
+      SpecialtyAppointmentVolume: {
+        type: "object",
+        required: ["specialtyId", "specialty", "totalAppointments"],
+        properties: {
+          specialtyId: { type: "string", format: "uuid" },
+          specialty: { type: "string" },
+          totalAppointments: { type: "integer", minimum: 0 },
+        },
+      },
+      DailyCutoffReport: {
+        type: "object",
+        required: ["date", "completed", "cancelled", "total"],
+        properties: {
+          date: { type: "string", format: "date" },
+          completed: { type: "integer", minimum: 0 },
+          cancelled: { type: "integer", minimum: 0 },
+          total: { type: "integer", minimum: 0 },
         },
       },
     },
@@ -228,7 +341,129 @@ const apiDocument = {
         },
       },
     },
+    "/api/auth/register": {
+      post: {
+        tags: ["Autenticación"],
+        summary: "Registrar usuario",
+        description: "Requiere autenticación válida y rol GERENCIA.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RegisterRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Usuario creado correctamente.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["message", "data"],
+                  properties: {
+                    message: { type: "string" },
+                    data: { $ref: "#/components/schemas/UserPublicData" },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Datos del usuario inválidos.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "401": {
+            description: "Token ausente o inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "La cuenta no tiene permisos para registrar usuarios.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "409": {
+            description: "Ya existe un usuario con ese correo electrónico.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al registrar usuario.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/patients": {
+      get: {
+        tags: ["Pacientes"],
+        summary: "Listar pacientes",
+        description: "Requiere autenticación y rol RECEPCIONISTA.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Listado de pacientes.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["data"],
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/PatientData" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Token ausente o inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "El rol no tiene permiso para consultar pacientes.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al consultar pacientes.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
       post: {
         tags: ["Pacientes"],
         summary: "Registrar paciente",
@@ -380,15 +615,16 @@ const apiDocument = {
         tags: ["Médicos"],
         summary: "Consultar directorio de médicos",
         description:
-          "Requiere autenticación y rol RECEPCIONISTA o GERENCIA. Sin resultados devuelve una lista vacía.",
+          "Requiere autenticación y exclusivamente el rol RECEPCIONISTA. Sin resultados devuelve una lista vacía.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
-            name: "specialtyId",
+            name: "specialty",
             in: "query",
             required: false,
-            description: "Filtra los médicos por UUID de especialidad.",
-            schema: { type: "string", format: "uuid" },
+            description:
+              "Filtra los médicos por nombre de especialidad. La comparación es exacta e insensible a mayúsculas y minúsculas.",
+            schema: { type: "string" },
           },
         ],
         responses: {
@@ -412,7 +648,7 @@ const apiDocument = {
             },
           },
           "400": {
-            description: "El filtro specialtyId no es un UUID válido.",
+            description: "El filtro specialty debe ser un nombre de especialidad válido.",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ErrorResponse" },
@@ -446,6 +682,400 @@ const apiDocument = {
         },
       },
     },
+    "/api/doctors/{id}/appointments": {
+      get: {
+        tags: ["Agenda médica"],
+        summary: "Consultar agenda de un médico",
+        description:
+          "Requiere autenticación y rol MEDICO. Puede filtrarse por rango de fechas opcional con from y to.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "UUID del médico.",
+            schema: { type: "string", format: "uuid" },
+          },
+          {
+            name: "from",
+            in: "query",
+            required: false,
+            description: "Fecha inicial inclusiva del rango.",
+            schema: { type: "string", format: "date-time" },
+          },
+          {
+            name: "to",
+            in: "query",
+            required: false,
+            description: "Fecha final inclusiva del rango.",
+            schema: { type: "string", format: "date-time" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Agenda del médico, posiblemente vacía.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["data"],
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/AppointmentWithPatient" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "El UUID del médico o los filtros están mal formados.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "401": {
+            description: "Token ausente o inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "El rol no tiene permiso para consultar agenda.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "404": {
+            description: "Médico no encontrado.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al consultar la agenda.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/appointments": {
+      post: {
+        tags: ["Citas"],
+        summary: "Programar cita",
+        description: "Requiere autenticación y rol RECEPCIONISTA.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AppointmentCreateRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Cita creada correctamente.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["message", "data"],
+                  properties: {
+                    message: { type: "string" },
+                    data: { $ref: "#/components/schemas/AppointmentWithPatient" },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Datos de la cita inválidos o fecha pasada.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "401": {
+            description: "Token ausente o inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "El rol no tiene permiso para programar citas.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "404": {
+            description: "Paciente o médico no encontrado.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al registrar la cita.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/appointments/{id}/status": {
+      patch: {
+        tags: ["Citas"],
+        summary: "Actualizar estado de la cita",
+        description: "Requiere autenticación y rol MEDICO.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{
+          name: "id",
+          in: "path",
+          required: true,
+          description: "UUID de la cita.",
+          schema: { type: "string", format: "uuid" },
+        }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AppointmentStatusUpdateRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Estado actualizado correctamente.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["message", "data"],
+                  properties: {
+                    message: { type: "string" },
+                    data: { $ref: "#/components/schemas/AppointmentWithPatient" },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Estado inválido o UUID incorrecto.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "401": {
+            description: "Token ausente o inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "El rol no tiene permiso para actualizar el estado.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "404": {
+            description: "Cita no encontrada.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al actualizar la cita.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/reports/appointments-by-specialty": {
+      get: {
+        tags: ["Reportes"],
+        summary: "Volumen de citas por especialidad",
+        description: "Requiere autenticación válida y rol GERENCIA. Devuelve el total de citas agrupadas por especialidad, incluyendo especialidades sin citas.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Reporte de volumen de citas por especialidad.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["data"],
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/SpecialtyAppointmentVolume" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Token ausente o inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "El usuario no tiene permisos para consultar reportes gerenciales.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al consultar el reporte por especialidad.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/reports/daily-cutoff": {
+      get: {
+        tags: ["Reportes"],
+        summary: "Corte diario de citas completadas y canceladas",
+        description: "Requiere autenticación válida y rol GERENCIA. Calcula el total de citas completadas y canceladas para la fecha indicada en la zona horaria de negocio America/Mexico_City.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "date",
+            in: "query",
+            required: true,
+            description: "Fecha en formato YYYY-MM-DD.",
+            schema: { type: "string", format: "date" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Corte diario del día solicitado.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["data"],
+                  properties: {
+                    data: { $ref: "#/components/schemas/DailyCutoffReport" },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "La fecha es obligatoria o tiene un formato inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "401": {
+            description: "Token ausente o inválido.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "El usuario no tiene permisos para consultar cortes diarios.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al consultar el corte diario.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/specialties": {
+      get: {
+        tags: ["Especialidades"],
+        summary: "Consultar catálogo de especialidades",
+        description: "Consulta pública y de solo lectura.",
+        responses: {
+          "200": {
+            description: "Lista de especialidades; puede estar vacía.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["data"],
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/Specialty" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Error interno al consultar especialidades.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
   },
 };
 
@@ -455,8 +1085,11 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/appointments", appointmentsRoutes);
 app.use("/api/doctors", doctorsRoutes);
 app.use("/api/patients", patientsRoutes);
+app.use("/api/reports", reportsRoutes);
+app.use("/api/specialties", specialtiesRoutes);
 
 app.get("/health", (_request, response) => {
   response.status(200).json({ status: "ok" });

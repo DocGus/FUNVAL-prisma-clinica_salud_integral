@@ -79,14 +79,23 @@ describe("doctors model", () => {
     });
   });
 
-  it("filters doctors by specialty ID", async () => {
+  it("filters doctors by specialty name with case-insensitive exact comparison", async () => {
     mocks.findMany.mockResolvedValue([doctor]);
 
     await expect(
-      doctorsModel.getDoctors(doctor.specialty.id),
+      doctorsModel.getDoctors("medicina general"),
     ).resolves.toEqual([doctor]);
     expect(mocks.findMany).toHaveBeenCalledWith({
-      where: { specialtyId: doctor.specialty.id },
+      where: {
+        specialty: {
+          is: {
+            name: {
+              equals: "medicina general",
+              mode: "insensitive",
+            },
+          },
+        },
+      },
       select: {
         id: true,
         firstName: true,

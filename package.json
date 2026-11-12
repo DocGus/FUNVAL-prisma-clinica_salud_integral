@@ -12,6 +12,7 @@
     "start": "node dist/src/server.js",
     "typecheck": "prisma generate && tsc --noEmit",
     "prisma:generate": "prisma generate",
+    "bootstrap:gerencia": "tsx src/scripts/bootstrapGerencia.ts",
     "pretest": "pnpm prisma:generate",
     "test": "vitest run",
     "test:integration": "pnpm prisma:generate && vitest run --config vitest.integration.config.ts"

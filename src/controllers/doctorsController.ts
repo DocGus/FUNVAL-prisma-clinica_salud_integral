@@ -7,15 +7,13 @@ export const getDoctors = async (req: Request, res: Response) => {
 
   if (!validation.success) {
     return res.status(400).json({
-      message: "El filtro specialtyId debe ser un UUID válido",
+      message: "El filtro specialty debe ser un nombre de especialidad válido",
       errors: validation.error.issues,
     });
   }
 
   try {
-    const doctors = await doctorsService.getDoctors(
-      validation.data.specialtyId,
-    );
+    const doctors = await doctorsService.getDoctors(validation.data.specialty);
 
     return res.status(200).json({ data: doctors });
   } catch (error) {

@@ -6,14 +6,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   jwtSecret: "test-secret-with-at-least-thirty-two-characters",
   compare: vi.fn<(password: string, hash: string) => Promise<boolean>>(),
+  hash: vi.fn<(password: string, salt: number) => Promise<string>>(),
   getUserByEmail: vi.fn<(email: string) => Promise<User | null>>(),
+  createUser: vi.fn(),
+  findDoctorById: vi.fn(),
   createUsersModel: vi.fn(() => ({
     getUserByEmail: mocks.getUserByEmail,
+    createUser: mocks.createUser,
   })),
 }));
 
 vi.mock("bcryptjs", () => ({
-  default: { compare: mocks.compare },
+  default: { compare: mocks.compare, hash: mocks.hash },
 }));
 
 vi.mock("../src/config/env.js", () => ({
@@ -21,14 +25,17 @@ vi.mock("../src/config/env.js", () => ({
 }));
 
 vi.mock("../src/config/prisma.js", () => ({
-  prisma: {},
+  prisma: {
+    doctor: { findUnique: mocks.findDoctorById },
+    user: { create: mocks.createUser },
+  },
 }));
 
 vi.mock("../src/models/usersModel.js", () => ({
   createUsersModel: mocks.createUsersModel,
 }));
 
-import { login } from "../src/services/authService.js";
+import { login, registerUser } from "../src/services/authService.js";
 
 describe("auth service", () => {
   const user: User = {
@@ -105,7 +112,7 @@ describe("auth service", () => {
     expect(payload).not.toHaveProperty("passwordHash");
   });
 
-  it("sets the JWT expiration to one hour", async () => {
+  it("sets the JWT expiration to eight hours", async () => {
     mocks.getUserByEmail.mockResolvedValue(user);
     mocks.compare.mockResolvedValue(true);
 
@@ -114,6 +121,52 @@ describe("auth service", () => {
 
     expect(payload.exp).toBeDefined();
     expect(payload.iat).toBeDefined();
-    expect(payload.exp! - payload.iat!).toBe(60 * 60);
+    expect(payload.exp! - payload.iat!).toBe(60 * 60 * 8);
+  });
+
+  it("registers a user with a bcrypt hash and without exposing the password", async () => {
+    mocks.findDoctorById.mockResolvedValue({ id: user.doctorId });
+    mocks.hash.mockResolvedValue("hashed-password");
+    mocks.createUser.mockResolvedValue({
+      ...user,
+      id: "new-user-id",
+      email: "new-user@example.com",
+      role: "RECEPCIONISTA",
+      doctorId: null,
+      passwordHash: "hashed-password",
+    });
+
+    const result = await registerUser({
+      email: "New-User@Example.com",
+      password: "supersecure123",
+      role: "RECEPCIONISTA",
+    });
+
+    expect(mocks.hash).toHaveBeenCalledWith("supersecure123", 12);
+    expect(mocks.createUser).toHaveBeenCalledWith({
+      email: "new-user@example.com",
+      passwordHash: "hashed-password",
+      role: "RECEPCIONISTA",
+    });
+    expect(result).toEqual({
+      id: "new-user-id",
+      email: "new-user@example.com",
+      role: "RECEPCIONISTA",
+      doctorId: null,
+    });
+    expect(result).not.toHaveProperty("passwordHash");
+  });
+
+  it("rejects registration when the provided doctor does not exist", async () => {
+    mocks.findDoctorById.mockResolvedValue(null);
+
+    await expect(
+      registerUser({
+        email: "manager@example.com",
+        password: "supersecure123",
+        role: "GERENCIA",
+        doctorId: "missing-doctor-id",
+      }),
+    ).rejects.toThrow("El doctor especificado no existe");
   });
 });

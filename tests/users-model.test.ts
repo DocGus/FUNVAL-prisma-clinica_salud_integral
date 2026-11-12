@@ -6,6 +6,7 @@ import { createUsersModel } from "../src/models/usersModel.js";
 type UserModelClient = {
   user: {
     create(args: { data: Prisma.UserCreateInput }): Promise<User>;
+    count(args?: { where?: Prisma.UserWhereInput }): Promise<number>;
     findUnique(args: {
       where: Prisma.UserWhereUniqueInput;
     }): Promise<User | null>;
@@ -17,6 +18,7 @@ type UserModelClient = {
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn<UserModelClient["user"]["create"]>(),
+  count: vi.fn<UserModelClient["user"]["count"]>(),
   findUnique: vi.fn<UserModelClient["user"]["findUnique"]>(),
   findFirst: vi.fn<UserModelClient["user"]["findFirst"]>(),
 }));
@@ -25,6 +27,7 @@ describe("users model", () => {
   const userClient = {
     user: {
       create: mocks.create,
+      count: mocks.count,
       findUnique: mocks.findUnique,
       findFirst: mocks.findFirst,
     },
@@ -53,6 +56,13 @@ describe("users model", () => {
 
     await expect(usersModel.createUser(data)).resolves.toEqual(user);
     expect(mocks.create).toHaveBeenCalledWith({ data });
+  });
+
+  it("counts users", async () => {
+    mocks.count.mockResolvedValue(0);
+
+    await expect(usersModel.countUsers()).resolves.toBe(0);
+    expect(mocks.count).toHaveBeenCalledWith();
   });
 
   it("retrieves a user by email", async () => {

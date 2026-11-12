@@ -63,22 +63,22 @@ describe("Doctors controller", () => {
     expect(mocks.getDoctors).toHaveBeenCalledWith(undefined);
   });
 
-  it("passes the specialty ID filter to the service", async () => {
+  it("passes the specialty name filter to the service", async () => {
     mocks.getDoctors.mockResolvedValue(doctors);
-    const specialtyId = doctors[0]!.specialty.id;
+    const specialtyName = doctors[0]!.specialty.name;
 
     const response = await request(app)
-      .get(`/api/doctors?specialtyId=${specialtyId}`)
+      .get(`/api/doctors?specialty=${encodeURIComponent(specialtyName)}`)
       .set("Authorization", `Bearer ${createToken("RECEPCIONISTA")}`)
       .expect(200);
 
     expect(response.body).toEqual({ data: doctors });
-    expect(mocks.getDoctors).toHaveBeenCalledWith(specialtyId);
+    expect(mocks.getDoctors).toHaveBeenCalledWith(specialtyName);
   });
 
-  it("returns 400 for an invalid specialty UUID", async () => {
+  it("returns 400 for an empty specialty filter", async () => {
     await request(app)
-      .get("/api/doctors?specialtyId=invalid-id")
+      .get("/api/doctors?specialty=")
       .set("Authorization", `Bearer ${createToken("RECEPCIONISTA")}`)
       .expect(400);
 
@@ -99,6 +99,15 @@ describe("Doctors controller", () => {
     expect(mocks.getDoctors).not.toHaveBeenCalled();
   });
 
+  it("returns 403 for GERENCIA", async () => {
+    await request(app)
+      .get("/api/doctors")
+      .set("Authorization", `Bearer ${createToken("GERENCIA")}`)
+      .expect(403);
+
+    expect(mocks.getDoctors).not.toHaveBeenCalled();
+  });
+
   it("allows RECEPCIONISTA", async () => {
     mocks.getDoctors.mockResolvedValue(doctors);
 
@@ -108,21 +117,12 @@ describe("Doctors controller", () => {
       .expect(200);
   });
 
-  it("allows GERENCIA", async () => {
-    mocks.getDoctors.mockResolvedValue(doctors);
-
-    await request(app)
-      .get("/api/doctors")
-      .set("Authorization", `Bearer ${createToken("GERENCIA")}`)
-      .expect(200);
-  });
-
   it("returns an empty array when there are no doctors", async () => {
     mocks.getDoctors.mockResolvedValue([]);
 
     const response = await request(app)
       .get("/api/doctors")
-      .set("Authorization", `Bearer ${createToken("GERENCIA")}`)
+      .set("Authorization", `Bearer ${createToken("RECEPCIONISTA")}`)
       .expect(200);
 
     expect(response.body).toEqual({ data: [] });

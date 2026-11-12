@@ -65,7 +65,7 @@ export const createPatientsModel = (client: PatientsModelClient) => ({
             },
           },
           orderBy: {
-            startAt: "desc",
+            scheduledAt: "desc",
           },
         },
       },

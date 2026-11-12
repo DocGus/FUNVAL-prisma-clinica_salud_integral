@@ -3,6 +3,6 @@ import { createDoctorsModel } from "../models/doctorsModel.js";
 
 const doctorsModel = createDoctorsModel(prisma);
 
-export const getDoctors = (specialtyId?: string) => {
-  return doctorsModel.getDoctors(specialtyId);
+export const getDoctors = (specialty?: string) => {
+  return doctorsModel.getDoctors(specialty);
 };
