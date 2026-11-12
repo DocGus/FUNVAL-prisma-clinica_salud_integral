@@ -1,112 +1,128 @@
-# FUNVAL — Plantilla de Proyecto Full Stack con Prisma
+from pathlib import Path
+
+doc = r"""# FUNVAL — Clínica Salud Integral: metodología y documentación extendida
 
 ## 1. Descripción
 
-Esta plantilla proporciona una estructura estandarizada y una metodología de trabajo para analizar, diseñar, implementar, documentar y validar sistemas que utilizan bases de datos relacionales y APIs REST.
+Este documento reúne la descripción técnica y la metodología de trabajo utilizada para analizar, diseñar, implementar, documentar y revisar el proyecto **Clínica Salud Integral — API REST**.
 
-Está diseñada para utilizarse como punto de partida en los ejercicios y proyectos académicos de desarrollo Full Stack durante la formación en FUNVAL.
+El proyecto parte de los ejercicios y conocimientos desarrollados durante la formación Full Stack FUNVAL y los aplica a una API con persistencia relacional. La solución implementada utiliza Node.js, TypeScript, Express 5, Prisma ORM 7 y PostgreSQL.
 
-La metodología organiza el desarrollo en tres grandes áreas:
+La metodología organiza el trabajo en tres grandes áreas:
 
 - **Análisis y diseño:** comprensión del problema, identificación de requerimientos, reglas de negocio, modelado de datos y arquitectura.
-- **Implementación:** construcción de una API REST utilizando Node.js, pnpm, TypeScript, Express 5 y Prisma ORM 7, conectada a PostgreSQL.
-- **Validación y documentación:** comprobación de las reglas de negocio, integridad de los datos, funcionamiento de los endpoints y comportamiento del sistema.
+- **Implementación:** construcción de la API REST, configuración de la persistencia, validaciones, autenticación, autorización y consultas.
+- **Validación y documentación:** ejecución de pruebas, revisión de restricciones, verificación técnica y mantenimiento de los documentos del proyecto.
 
-El propósito es trabajar de manera progresiva, documentada y reproducible, evitando comenzar directamente con la programación sin comprender primero el problema que se desea resolver.
+El propósito es mantener trazabilidad entre lo que necesita resolver el sistema, lo que se diseñó y lo que realmente está implementado. La documentación distingue entre funcionalidades confirmadas, decisiones de diseño y verificaciones que todavía requieren pruebas funcionales.
 
-La plantilla busca mantener una separación clara entre las necesidades del negocio, el diseño de los datos y las decisiones técnicas de implementación.
+La versión actual es un backend API. No debe interpretarse como una aplicación clínica integral con interfaz gráfica, expediente clínico ampliado, pagos o facturación.
 
 ## 2. Tecnologías y herramientas
 
 ### Backend
 
-- **Node.js:** entorno de ejecución de JavaScript; requiere `>=20.19.0`.
-- **pnpm:** gestor de paquetes; el proyecto fija la versión `12.18.0`.
+- **Node.js:** entorno de ejecución de JavaScript.
+- **pnpm:** gestor de paquetes utilizado por el proyecto.
 - **TypeScript:** lenguaje de programación con tipado estático.
-- **Express 5:** framework para construir APIs REST.
-- **Prisma ORM 7:** herramienta para modelar datos, generar el cliente y administrar migraciones en proyectos derivados.
-- **Zod:** biblioteca utilizada para validar variables de entorno y disponible para validar datos de entrada.
-- **Vitest y Supertest:** herramientas para pruebas unitarias y HTTP.
-- **Swagger UI:** interfaz para consultar la especificación OpenAPI básica.
+- **Express 5:** framework para construir la API REST.
+- **Prisma ORM 7:** herramienta para definir el esquema, generar el cliente y administrar migraciones.
+- **Zod:** biblioteca utilizada para validar datos de entrada y configuración.
+- **JWT:** mecanismo de autenticación mediante tokens.
+- **bcryptjs:** biblioteca utilizada para verificar contraseñas mediante hashes.
+- **Vitest:** herramienta para ejecutar pruebas automatizadas.
+- **Supertest:** herramienta contemplada para pruebas HTTP.
+- **Swagger UI / OpenAPI:** documentación interactiva de la API.
 
-La plantilla no incluye autenticación implementada ni instala JWT o bcrypt.
-La autenticación con JWT y el hashing de contraseñas son funcionalidades
-futuras y opcionales para un proyecto derivado.
+Las versiones exactas de Node.js y pnpm deben consultarse en `package.json` y en la configuración del entorno del repositorio; este documento evita fijar versiones que podrían quedar desactualizadas.
 
 ### Base de datos
 
 - **PostgreSQL:** sistema gestor de bases de datos relacionales.
-- **Prisma Schema:** lenguaje de modelado utilizado para definir modelos, atributos y relaciones.
-- **Prisma Migrate:** herramienta disponible para administrar cambios estructurales cuando un proyecto derivado agregue modelos y migraciones.
+- **Prisma Schema:** definición de modelos, atributos, enumeraciones y relaciones.
+- **Prisma Migrate:** herramienta para administrar cambios estructurales mediante migraciones.
 - **Prisma Client:** cliente generado para realizar consultas y operaciones desde TypeScript.
 
 ### Diseño y documentación
 
-- **DBML:** lenguaje para representar modelos relacionales.
+- **DBML:** lenguaje utilizado para representar el modelo relacional.
 - **Mermaid / herramientas ERD:** representación gráfica de modelos y relaciones.
 - **Markdown:** documentación técnica y metodológica.
+- **OpenAPI:** especificación de la interfaz HTTP documentada mediante Swagger UI.
 
 ### Herramientas de desarrollo
 
 - **Visual Studio Code:** entorno de desarrollo.
 - **Git:** sistema de control de versiones.
-- **GitHub:** alojamiento y colaboración de proyectos.
-- **Docker:** herramienta opcional para administrar entornos de desarrollo y bases de datos.
+- **GitHub:** alojamiento y colaboración del repositorio.
+- **Docker:** herramienta opcional para administrar entornos de desarrollo y bases de datos; no debe considerarse requisito de ejecución si el proyecto no lo utiliza en el flujo correspondiente.
 
 ## 3. Estructura del proyecto
 
-Estructura actual de la plantilla:
+La organización general del proyecto se distribuye en documentación, esquema y migraciones de Prisma, código fuente, pruebas y archivos de configuración.
 
 ```text
 .
-├── docs/                 Documentación académica y técnica
-├── generated/            Clientes Prisma generados localmente (ignorado por Git)
+├── docs/
+│   ├── 00.0_requirements.md
+│   ├── 01.0_business-rules.md
+│   ├── 02.0_entities-and-attributes.md
+│   ├── 03.0_diagram-er.md
+│   ├── 04.0_relation-model.dbml
+│   ├── 05.0_normalization.md
+│   └── 06.0_architecture.md
 ├── prisma/
-│   ├── migrations/       Sin migraciones de dominio al inicio
-│   └── schema.prisma     Proveedor PostgreSQL y generador, sin modelos
+│   ├── migrations/
+│   ├── schema.prisma
+│   └── seed.ts
+├── generated/
+│   └── prisma/
 ├── src/
-│   ├── config/           Entorno y cliente Prisma de la aplicación
-│   ├── app.ts            Aplicación Express, health check y Swagger UI
-│   └── server.ts         Inicio del servidor HTTP
+│   ├── config/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── models/
+│   ├── routes/
+│   ├── schemas/
+│   ├── services/
+│   ├── utils/
+│   ├── app.ts
+│   └── server.ts
 ├── tests/
-│   ├── integration/      Conexión PostgreSQL de solo lectura (SELECT 1)
-│   ├── support/          Cliente y validación de URL de prueba
-│   └── *.test.ts         Pruebas unitarias, HTTP y de aislamiento
+│   ├── unit/
+│   ├── integration/
+│   └── support/
 ├── .env.example
+├── .gitignore
 ├── package.json
 ├── pnpm-lock.yaml
-├── prisma7.config.ts
+├── prisma.config.ts
 ├── tsconfig.json
-├── tsconfig.build.json
-├── vitest.config.ts
-└── vitest.integration.config.ts
+└── tsconfig.build.json
 ```
 
-El esquema y las migraciones de producción comienzan sin modelos de negocio ni
-migraciones de dominio. La estructura puede ampliarse en un proyecto derivado
-sin agregar carpetas, dependencias o capas que no aporten valor.
+El árbol representa las áreas principales del repositorio. Los archivos concretos pueden variar según el contenido actual de cada módulo; no debe inferirse la existencia de un CRUD completo solo porque exista una carpeta, un modelo o un router.
 
 ### Instalación, variables de entorno y comandos
 
-Requisitos: Node.js `>=20.19.0` y pnpm `12.18.0`. PostgreSQL se necesita para
-conectar la aplicación o ejecutar la prueba de integración.
+Instalar dependencias y preparar el archivo de entorno:
 
 ```sh
 pnpm install
 cp .env.example .env
 ```
 
-Configura las URLs en `.env`; no publiques ese archivo ni sus credenciales:
+Configurar las variables necesarias en `.env`. No publicar ese archivo ni sus credenciales.
 
-- `DATABASE_URL`: URL obligatoria para la configuración Prisma normal de la
-  aplicación.
-- `TEST_DATABASE_URL`: URL opcional para la prueba de integración. Debe apuntar
-  a una base PostgreSQL **exclusiva para pruebas** cuyo nombre termine en
-  `_test`. Nunca sustituye a `DATABASE_URL`.
-- `PORT`: puerto HTTP, por defecto `3000`.
-- `NODE_ENV`: `development`, `test` o `production`, por defecto `development`.
+- `DATABASE_URL`: URL de conexión de la aplicación a PostgreSQL.
+- `TEST_DATABASE_URL`: URL destinada a pruebas que requieran una base de datos exclusiva de pruebas.
+- `JWT_SECRET`: clave utilizada para firmar y verificar tokens JWT.
+- `PORT`: puerto HTTP, cuando esté configurado.
+- `NODE_ENV`: entorno de ejecución.
 
-Comandos definidos en `package.json`:
+Los nombres y requisitos definitivos deben comprobarse en `src/config/` y `.env.example`. `TEST_DATABASE_URL` no sustituye automáticamente a `DATABASE_URL` para los comandos de Prisma CLI.
+
+Comandos principales utilizados o contemplados por el proyecto:
 
 ```sh
 pnpm prisma:generate
@@ -118,82 +134,74 @@ pnpm build
 pnpm start
 ```
 
-`pnpm test` ejecuta las pruebas unitarias y HTTP sin requerir PostgreSQL.
-`pnpm test:integration` utiliza solo `TEST_DATABASE_URL`, ejecuta
-`SELECT 1 AS result` y desconecta; no aplica migraciones ni realiza escrituras.
-`pnpm typecheck` verifica tipos y `pnpm build` compila únicamente la salida de
-producción. La API ofrece `GET /health` y Swagger UI en `/api/docs`.
+Antes de ejecutar un comando, confirmar su definición exacta en `package.json`.
+
+- `pnpm test` ejecuta la suite automatizada configurada para pruebas unitarias y HTTP.
+- `pnpm test:integration` está destinado a pruebas que requieren PostgreSQL y debe utilizar exclusivamente `TEST_DATABASE_URL`.
+- `pnpm typecheck` verifica los tipos de TypeScript.
+- `pnpm build` compila la aplicación para producción.
+- `pnpm dev` inicia el servidor en desarrollo.
+- `pnpm start` ejecuta el proceso de producción si el script está definido.
+
+La API expone `GET /health` y Swagger UI en `/api/docs`.
 
 ## 4. Metodología de desarrollo
 
-El desarrollo se divide en seis fases generales:
-
-1. Análisis: comprender el problema y determinar qué necesita resolver el sistema.
-2. Diseño: transformar los requerimientos en reglas de negocio y modelos de datos.
-3. Arquitectura: definir la organización de la base de datos y la API.
-4. Implementación: construir el backend y la persistencia utilizando Prisma y PostgreSQL.
-5. Validación: comprobar las reglas, restricciones, consultas y endpoints.
-6. Documentación: mantener actualizados los documentos y registrar la evolución del proyecto.
+El desarrollo del proyecto se organizó en fases de análisis, diseño, implementación y validación. Las fases describen el proceso seguido y pueden reutilizarse como guía en proyectos derivados.
 
 ### Fase 1. Análisis de requerimientos
 
 **Archivo:** `docs/00.0_requirements.md`
 
-**Objetivo:** comprender la idea del cliente, analizar su viabilidad desde la lógica del negocio y construir una especificación clara de lo que el sistema debe resolver.
+**Objetivo:** comprender el problema del cliente, identificar el alcance y convertir las necesidades iniciales en requerimientos claros.
 
 Actividades:
 
-1. Consulta inicial con el cliente.
-   - Obtener y documentar la idea original.
-   - Comprender el problema o necesidad.
-   - Identificar los objetivos esperados.
-   - Conocer los procesos actuales.
+1. Consulta inicial y comprensión del problema.
+   - Documentar la idea original.
+   - Identificar la necesidad que se busca resolver.
+   - Reconocer los procesos actuales.
    - Identificar actores y responsabilidades.
    - Registrar las funcionalidades solicitadas.
 
-2. Análisis de la idea y detección de vacíos.
-   - Examinar los procesos desde la lógica del negocio.
+2. Análisis y detección de vacíos.
    - Identificar información faltante o ambigua.
    - Detectar contradicciones.
-   - Identificar responsabilidades y permisos no especificados.
    - Examinar flujos de trabajo y excepciones.
-   - Formular preguntas y proponer alternativas.
+   - Identificar permisos y responsabilidades no especificados.
+   - Formular preguntas para aclarar el alcance.
 
-3. Consulta complementaria y validación.
-   - Presentar dudas y contradicciones.
+3. Validación de decisiones.
    - Aclarar procesos y excepciones.
-   - Definir responsabilidades y permisos.
-   - Confirmar el alcance.
-   - Registrar respuestas, decisiones y acuerdos.
-   - Diferenciar requerimientos confirmados, suposiciones y cuestiones pendientes.
+   - Definir responsabilidades.
+   - Registrar decisiones y acuerdos.
+   - Diferenciar requisitos confirmados, supuestos y pendientes.
 
-4. Consolidación de requerimientos.
+4. Consolidación.
    - Definir propósito y alcance.
    - Identificar actores.
    - Describir procesos y funcionalidades.
-   - Establecer requerimientos funcionales y no funcionales.
    - Documentar restricciones.
-   - Definir criterios de aceptación.
+   - Establecer criterios de aceptación.
 
-**Resultado esperado:** un documento de requerimientos que represente una visión clara y validada del sistema.
+**Resultado:** documento de requerimientos que establece qué debe resolver el sistema y qué queda fuera de alcance.
 
 ### Fase 2. Reglas de negocio
 
 **Archivo:** `docs/01.0_business-rules.md`
 
-**Objetivo:** establecer las condiciones que regulan el funcionamiento del sistema.
+**Objetivo:** establecer las condiciones que regulan el comportamiento de la aplicación.
 
 Actividades:
 
 - Identificar restricciones del negocio.
 - Definir condiciones para registrar y modificar información.
 - Establecer relaciones permitidas.
-- Determinar reglas de participación.
 - Identificar restricciones de unicidad y obligatoriedad.
-- Definir condiciones para mantener la consistencia de los datos.
-- Identificar reglas que deberán validarse en la aplicación.
+- Determinar las reglas que deben validarse en la aplicación o en la base de datos.
+- Distinguir reglas implementadas de propuestas que aún no están verificadas.
 
-**Resultado esperado:** un conjunto de reglas claras que puedan traducirse en modelos, restricciones de base de datos y validaciones del backend.
+**Resultado:** conjunto de reglas trazables a los requerimientos y al código.
 
 ### Fase 3. Entidades y atributos
 
@@ -205,22 +213,18 @@ Actividades:
 
 - Identificar entidades principales.
 - Diferenciar entidades independientes y dependientes.
-- Identificar atributos.
-- Definir el significado de cada atributo.
-- Proponer claves primarias.
-- Identificar claves candidatas.
+- Identificar atributos y su significado.
+- Definir claves primarias y candidatas.
 - Determinar atributos obligatorios, opcionales y únicos.
-- Identificar posibles relaciones entre entidades.
+- Identificar relaciones entre entidades.
 
-**Resultado esperado:** un catálogo de entidades y atributos que sirva como base para construir el modelo entidad-relación.
+**Resultado:** catálogo de entidades y atributos que sirve como base para el modelo entidad-relación.
 
 ### Fase 4. Modelo entidad-relación
 
-**Archivos:**
+**Archivo:** `docs/03.0_diagram-er.md`
 
-- `docs/03.0_diagram-er.md`
-
-**Objetivo:** representar gráficamente la estructura conceptual de los datos y sus relaciones.
+**Objetivo:** representar conceptualmente la estructura de los datos y sus relaciones.
 
 Actividades:
 
@@ -229,10 +233,9 @@ Actividades:
 - Identificar entidades asociativas cuando sean necesarias.
 - Determinar participación obligatoria u opcional.
 - Documentar las relaciones y sus justificaciones.
-- Construir el diagrama entidad-relación.
-- Revisar que el diagrama represente las reglas de negocio.
+- Construir y revisar el diagrama.
 
-**Resultado esperado:** un modelo conceptual coherente con los requerimientos y las reglas de negocio.
+**Resultado:** modelo conceptual coherente con los requerimientos y las reglas de negocio.
 
 ### Fase 5. Modelo relacional
 
@@ -243,15 +246,14 @@ Actividades:
 Actividades:
 
 - Convertir entidades en tablas.
-- Definir columnas.
-- Proponer tipos de datos.
+- Definir columnas y tipos de datos.
 - Establecer claves primarias y foráneas.
 - Resolver relaciones muchos a muchos.
 - Definir restricciones de integridad.
 - Representar el modelo mediante DBML.
-- Generar una visualización del esquema.
+- Comparar el modelo documental con el esquema implementado.
 
-**Resultado esperado:** un modelo relacional que describa las tablas, columnas, claves y relaciones de la base de datos.
+**Resultado:** modelo relacional que describe tablas, columnas, claves y relaciones.
 
 ### Fase 6. Normalización
 
@@ -265,71 +267,67 @@ Actividades:
 - Revisar Primera Forma Normal (1FN).
 - Revisar Segunda Forma Normal (2FN).
 - Revisar Tercera Forma Normal (3FN).
-- Identificar redundancias.
-- Evaluar anomalías de inserción, actualización y eliminación.
-- Documentar las decisiones de normalización.
+- Evaluar redundancias y anomalías de inserción, actualización y eliminación.
+- Documentar las decisiones de normalización y sus límites.
 
-**Resultado esperado:** una estructura relacional consistente y justificada desde el punto de vista de la normalización.
+**Resultado:** análisis justificado de la estructura relacional.
 
 ### Fase 7. Arquitectura del sistema
 
 **Archivo:** `docs/06.0_architecture.md`
 
-**Objetivo:** documentar la organización general de la solución y las decisiones arquitectónicas.
+**Objetivo:** documentar la organización de la solución y las decisiones arquitectónicas.
 
 Actividades:
 
 - Describir los componentes principales.
 - Explicar la relación entre backend y base de datos.
-- Definir las responsabilidades de cada capa.
-- Documentar el flujo de las solicitudes HTTP.
+- Definir responsabilidades de rutas, middlewares, controladores, servicios y acceso a datos.
+- Documentar el flujo de solicitudes HTTP.
 - Explicar la conexión entre Express, Prisma y PostgreSQL.
 - Identificar decisiones relevantes para mantenimiento y evolución.
 
-**Resultado esperado:** una descripción técnica de la arquitectura del sistema.
+**Resultado:** descripción técnica de la arquitectura identificada en el proyecto.
 
-### Fase 8. Diseño de la API
+### Fase 8. Diseño y documentación de la API
 
-**Documento sugerido para el proyecto derivado:** diseño de la API. No forma
-parte actualmente de la plantilla.
+**Referencia:** rutas implementadas y documentación OpenAPI.
 
-**Objetivo:** definir cómo el backend expondrá las funcionalidades del sistema mediante endpoints REST.
+**Objetivo:** describir cómo el backend expone sus funcionalidades mediante endpoints REST.
 
 Actividades:
 
-- Identificar los recursos de la API.
-- Definir endpoints y métodos HTTP.
-- Establecer parámetros y datos de entrada.
-- Definir estructuras de respuesta.
-- Documentar códigos de estado HTTP.
-- Identificar endpoints protegidos.
-- Establecer permisos y responsabilidades por rol.
-- Relacionar cada endpoint con los requerimientos y reglas de negocio.
+- Identificar recursos y rutas.
+- Documentar métodos HTTP y parámetros.
+- Describir datos de entrada y respuestas.
+- Registrar códigos HTTP.
+- Identificar rutas protegidas.
+- Documentar permisos por rol a partir de los middlewares reales.
+- Relacionar endpoints con requerimientos y reglas de negocio.
 
-**Resultado esperado:** una especificación de endpoints que permita implementar y validar la API de forma ordenada.
+**Resultado:** contrato de API alineado con las rutas realmente implementadas. No se deben documentar como disponibles endpoints que solo existan en propuestas anteriores.
 
 ### Fase 9. Estrategia de validación
 
-**Documento sugerido para el proyecto derivado:** estrategia de validación. No
-forma parte actualmente de la plantilla.
+**Referencia:** pruebas automatizadas, verificaciones técnicas y criterios de aceptación.
 
-**Objetivo:** establecer cómo se comprobará el funcionamiento del sistema.
+**Objetivo:** establecer cómo se comprueba el comportamiento del sistema.
 
 Actividades:
 
 - Identificar escenarios de prueba.
-- Definir validaciones de entrada con Zod.
-- Identificar restricciones que debe garantizar PostgreSQL.
-- Definir pruebas de endpoints.
+- Validar datos de entrada con Zod.
+- Comprobar restricciones de PostgreSQL.
+- Probar endpoints y códigos HTTP.
 - Comprobar relaciones y restricciones.
-- Validar autenticación y permisos cuando correspondan.
-- Establecer criterios de aceptación.
+- Validar autenticación, autorización y pertenencia de recursos.
+- Registrar pruebas ejecutadas y pendientes.
 
-**Resultado esperado:** un conjunto de escenarios y criterios que permitan comprobar que la implementación cumple los requerimientos.
+**Resultado:** evidencia de validación que permita distinguir compilación, pruebas automatizadas, pruebas de integración y aceptación funcional.
 
 ## 5. Implementación del sistema
 
-Una vez finalizado el análisis y el diseño, comienza la implementación técnica.
+Una vez completados el análisis y el diseño, se desarrolla la solución técnica. Las siguientes fases describen los componentes del proyecto y el trabajo realizado; no implican que todas las capacidades posibles de cada componente estén implementadas.
 
 ### Fase 10. Configuración del entorno
 
@@ -339,76 +337,90 @@ Una vez finalizado el análisis y el diseño, comienza la implementación técni
 - `tsconfig.json`
 - `.env`
 - `.env.example`
-- `prisma7.config.ts`
+- `prisma.config.ts`
 
 **Objetivo:** preparar el entorno de desarrollo y configurar los componentes necesarios.
 
 Actividades:
 
-- Inicializar el proyecto Node.js.
+- Configurar Node.js y pnpm.
 - Configurar TypeScript.
 - Instalar y configurar Express.
-- Instalar Prisma ORM.
+- Configurar Prisma ORM.
 - Configurar PostgreSQL.
-- Configurar las variables de entorno.
-- Preparar la conexión mediante el adaptador correspondiente a PostgreSQL.
-- Verificar que el entorno funcione correctamente.
+- Validar variables de entorno.
+- Preparar la conexión mediante el adaptador de PostgreSQL.
+- Verificar el funcionamiento del entorno.
 
-**Resultado esperado:** un entorno de desarrollo configurado y preparado para implementar la API y su persistencia.
+**Resultado:** entorno preparado para desarrollar y ejecutar la API.
 
 ### Fase 11. Implementación del modelo Prisma
 
 **Archivo:** `prisma/schema.prisma`
 
-**Objetivo:** representar el modelo relacional mediante los modelos, campos y relaciones de Prisma.
+**Objetivo:** representar el modelo relacional mediante modelos, campos y relaciones de Prisma.
+
+El esquema implementado contiene cinco modelos principales:
+
+- `Patient`
+- `Doctor`
+- `Specialty`
+- `Appointment`
+- `User`
+
+También define los enums `AppointmentStatus` y `UserRole`, además de relaciones, restricciones e índices.
 
 Actividades:
 
-- Definir los modelos.
-- Establecer identificadores.
+- Definir modelos y atributos.
+- Establecer identificadores UUID.
 - Definir tipos de datos.
 - Establecer campos obligatorios y opcionales.
 - Definir relaciones.
-- Configurar claves únicas.
-- Definir índices cuando estén justificados.
-- Configurar enumeraciones cuando sean necesarias.
-- Comparar el esquema Prisma con el modelo relacional documentado.
+- Configurar claves únicas e índices.
+- Definir enumeraciones.
+- Comparar el esquema con el modelo relacional documentado.
 
-**Resultado esperado:** un esquema Prisma coherente con el diseño de datos aprobado.
+**Resultado:** esquema Prisma que representa el modelo de datos implementado.
 
 ### Fase 12. Migraciones de base de datos
 
 **Directorio:** `prisma/migrations/`
 
-**Objetivo:** implementar y registrar los cambios estructurales de la base de datos.
+**Objetivo:** registrar y aplicar los cambios estructurales de la base de datos.
 
 Actividades:
 
-- Generar la migración inicial.
+- Generar migraciones.
 - Revisar los cambios generados.
-- Aplicar las migraciones.
+- Aplicar migraciones al entorno correspondiente.
 - Verificar la estructura en PostgreSQL.
-- Registrar cada modificación estructural.
-- Mantener sincronizado el esquema Prisma con la base de datos.
+- Registrar modificaciones estructurales.
+- Mantener sincronizados el esquema Prisma y la base de datos.
 
-**Resultado esperado:** una base de datos creada y evolucionada mediante migraciones reproducibles.
+**Resultado:** estructura de base de datos reproducible mediante migraciones versionadas.
+
+En la revisión técnica registrada se confirmó la aplicación de dos migraciones en la base de datos de pruebas.
 
 ### Fase 13. Datos iniciales
 
 **Archivo:** `prisma/seed.ts`
 
-**Objetivo:** poblar la base de datos con información de prueba.
+**Objetivo:** preparar datos iniciales de catálogo para el entorno de desarrollo o prueba.
+
+El seed implementado utiliza operaciones idempotentes para crear o actualizar tres especialidades —Medicina General, Pediatría y Cardiología— y dos médicos por especialidad.
 
 Actividades:
 
-- Preparar registros representativos.
-- Respetar las dependencias entre modelos.
-- Insertar registros relacionados correctamente.
-- Comprobar restricciones de integridad.
-- Verificar que los datos sean coherentes con las reglas de negocio.
-- Evitar duplicaciones cuando se vuelva a ejecutar el proceso.
+- Preparar registros iniciales.
+- Respetar dependencias entre modelos.
+- Insertar registros relacionados.
+- Evitar duplicaciones al volver a ejecutar el proceso.
+- Verificar que los datos correspondan al esquema.
 
-**Resultado esperado:** una base de datos poblada con información de prueba útil para desarrollar y validar el sistema.
+**Resultado:** catálogo inicial de especialidades y médicos.
+
+El seed descrito no debe confundirse con un proceso de aprovisionamiento de cuentas de usuario ni con un endpoint de registro.
 
 ### Fase 14. Implementación de la API REST
 
@@ -418,61 +430,59 @@ Actividades:
 
 Responsabilidades principales:
 
-- `routes/`: definir las rutas y métodos HTTP.
-- `controllers/`: recibir solicitudes y gestionar las respuestas.
-- `services/`: implementar la lógica de aplicación y coordinar operaciones.
+- `routes/`: definir rutas y métodos HTTP.
+- `controllers/`: recibir solicitudes y gestionar respuestas.
+- `services/`: implementar lógica de aplicación y coordinar operaciones.
 - `schemas/`: validar datos de entrada mediante Zod.
 - `middlewares/`: gestionar autenticación, autorización y validaciones transversales.
+- `models/`: organizar operaciones de acceso a datos.
 - `config/`: centralizar configuraciones.
 - `utils/`: mantener funciones auxiliares reutilizables.
-- `app.ts`: configurar Express.
-- `server.ts`: iniciar el servidor.
+- `app.ts`: configurar Express y montar rutas.
+- `server.ts`: iniciar el servidor HTTP.
 
-La organización deberá responder a las necesidades reales del proyecto y no introducir capas innecesarias.
-
-**Resultado esperado:** una API REST funcional que implemente los requerimientos y reglas de negocio utilizando Prisma Client para acceder a PostgreSQL.
+**Resultado:** API REST modular que implementa las operaciones confirmadas del proyecto.
 
 ### Fase 15. Consultas y operaciones con Prisma Client
 
-**Objetivo:** recuperar, registrar, actualizar y eliminar información mediante Prisma Client.
+**Objetivo:** recuperar, registrar y actualizar información mediante Prisma Client.
 
-Actividades:
+Las operaciones utilizadas dependen de cada servicio. Prisma Client ofrece, entre otras, las siguientes:
 
 - Crear registros con `create`.
 - Consultar registros con `findMany`, `findUnique` y `findFirst`.
 - Actualizar información con `update` y `updateMany`.
-- Eliminar registros con `delete` y `deleteMany`.
-- Aplicar filtros, ordenamientos y paginación.
 - Consultar relaciones mediante `include` y `select`.
+- Aplicar filtros y ordenamientos.
 - Utilizar operaciones de agregación y agrupación.
-- Implementar transacciones cuando sean necesarias.
-- Utilizar consultas SQL parametrizadas mediante `$queryRaw` únicamente cuando el caso lo justifique.
+- Ejecutar transacciones cuando el caso lo requiera.
+- Utilizar SQL parametrizado mediante `$queryRaw` cuando esté justificado.
 
-**Resultado esperado:** operaciones de persistencia que respondan a los requerimientos del sistema y respeten las reglas de negocio.
+**Resultado:** operaciones de persistencia alineadas con el modelo y las reglas de negocio implementadas.
 
 ## 6. Orden general de implementación
 
-El flujo recomendado es:
+El flujo general aplicado al proyecto puede resumirse así:
 
-| Orden | Actividad | Herramienta |
+| Orden | Actividad | Herramienta o componente |
 |---|---|---|
-| 1 | Configurar el entorno | Node.js y TypeScript |
+| 1 | Configurar el entorno | Node.js, pnpm y TypeScript |
 | 2 | Configurar PostgreSQL y Prisma | Prisma ORM |
 | 3 | Definir los modelos | `schema.prisma` |
-| 4 | Crear la estructura de la base de datos | Prisma Migrate |
+| 4 | Crear y aplicar la estructura de base de datos | Prisma Migrate |
 | 5 | Insertar datos iniciales | `seed.ts` |
 | 6 | Implementar rutas y controladores | Express |
-| 7 | Implementar lógica de aplicación | Services y Prisma Client |
+| 7 | Implementar lógica de aplicación | Services y acceso a datos |
 | 8 | Validar datos de entrada | Zod |
-| 9 | Evaluar funcionalidades de seguridad opcionales | Autenticación y hashing de contraseñas, si el proyecto lo requiere |
-| 10 | Ejecutar pruebas | Tests |
-| 11 | Documentar la API | Swagger/OpenAPI, cuando corresponda |
+| 9 | Implementar autenticación y autorización | JWT, bcryptjs y middlewares |
+| 10 | Ejecutar pruebas automatizadas | Vitest y herramientas de prueba configuradas |
+| 11 | Documentar la API | Swagger UI / OpenAPI |
 
-El orden podrá ajustarse de acuerdo con los requerimientos y el alcance de cada proyecto.
+El orden puede ajustarse según las dependencias entre módulos. Las capacidades no confirmadas deben tratarse como trabajo futuro, no como parte de la entrega actual.
 
 ## 7. Validación del proyecto
 
-Antes de considerar terminado el ejercicio, verificar:
+Antes de considerar terminado un proyecto derivado, se recomienda verificar los siguientes puntos. El checklist es una guía de aceptación; no significa que todos los puntos estén aprobados en la versión actual.
 
 ### Análisis y diseño
 
@@ -497,10 +507,28 @@ Antes de considerar terminado el ejercicio, verificar:
 - [ ] Los endpoints responden correctamente.
 - [ ] Las validaciones de entrada funcionan.
 - [ ] Las reglas de negocio se respetan.
-- [ ] La autenticación y autorización se validan si se implementan como funcionalidades del proyecto derivado.
-- [ ] Las consultas y operaciones de Prisma producen resultados esperados.
-- [ ] Las pruebas están ejecutadas.
+- [ ] La autenticación y autorización se validan.
+- [ ] Las consultas y operaciones de Prisma producen los resultados esperados.
+- [ ] Las pruebas unitarias están ejecutadas.
+- [ ] Las pruebas de integración están ejecutadas cuando corresponda.
+- [ ] Las pruebas HTTP y de aceptación están ejecutadas.
 - [ ] La documentación está actualizada.
+
+### Verificaciones registradas en esta versión
+
+En la revisión técnica documentada se obtuvieron los siguientes resultados:
+
+| Verificación | Resultado |
+|---|---|
+| `pnpm typecheck` | Correcto. |
+| `pnpm build` | Correcto. |
+| `pnpm test` | Correcto: 23 archivos de prueba y 149 pruebas. |
+| `pnpm test:integration` | No ejecutado en esa revisión. |
+| Pruebas funcionales HTTP de aceptación | Pendientes. |
+
+También se verificó la aplicación de dos migraciones en la base de datos de pruebas y la presencia de la columna opcional `appointments.reason`.
+
+Estos resultados no equivalen a una certificación funcional integral. Las pruebas de integración y la aceptación funcional deben ejecutarse para confirmar los flujos completos de la API.
 
 ## 8. Control de versiones
 
@@ -517,13 +545,13 @@ git push
 
 Ejemplos de mensajes:
 
-- `docs: add business requirements`
+- `docs: update business requirements`
 - `docs: document database relationships`
 - `feat: configure prisma schema`
-- `feat: create initial database migration`
-- `feat: implement patients endpoints`
+- `feat: create database migration`
+- `feat: implement appointment endpoints`
 - `feat: add request validation with zod`
-- `test: validate patient endpoints`
+- `test: validate appointment permissions`
 - `docs: update API documentation`
 
 No incluir credenciales, archivos `.env` ni información sensible en el repositorio.
@@ -537,16 +565,28 @@ No incluir credenciales, archivos `.env` ni información sensible en el reposito
 - Separar el diseño relacional de su implementación mediante Prisma.
 - Evitar agregar entidades, atributos o reglas innecesarias.
 - Utilizar migraciones para administrar los cambios estructurales.
-- Aplicar validaciones tanto en la aplicación como en la base de datos cuando corresponda.
+- Aplicar validaciones en la aplicación y restricciones en la base de datos cuando corresponda.
 - Mantener separadas las responsabilidades del backend.
 - Validar las funcionalidades mediante pruebas.
+- Diferenciar entre código implementado, pruebas ejecutadas y funcionalidades pendientes.
 - Mantener los archivos organizados y reproducibles.
-- Utilizar control de versiones desde el inicio del proyecto.
+- Utilizar control de versiones desde el inicio.
+- No documentar como disponible una funcionalidad que solo esté propuesta.
 
-## 10. Autor
+## 10. Autoría
 
 **Gustavo Andrés Santoyo Benavides**
 
 FUNVAL — Full Stack Development
 
+Proyecto académico: **Clínica Salud Integral — API REST**.
+
 Database Design and Full Stack API Implementation Practice.
+
+*Este repositorio documenta el desarrollo académico y técnico de Clínica Salud Integral. Su alcance debe interpretarse conforme a las funcionalidades y verificaciones descritas en esta documentación y en el código fuente.*
+
+
+out = Path("/mnt/data/README.ES_revisado.md")
+out.write_text(doc, encoding="utf-8")
+print(f"Documento creado: {out.name}")
+print(f"Líneas: {len(doc.splitlines())}")

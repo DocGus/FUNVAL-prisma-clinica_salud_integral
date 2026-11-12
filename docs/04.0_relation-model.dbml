@@ -1,37 +1,28 @@
+from pathlib import Path
 
-/*
+dbml = r'''/*
 ============================================================
 DOCUMENTO: 04.0_relation-model.dbml
 ============================================================
 
 FUNCIÓN:
-Definir el modelo relacional de la base de datos mediante DBML
-(Database Markup Language).
-
-Transforma el modelo conceptual entidad-relación en una estructura
-lógica compuesta por tablas, columnas, claves y restricciones.
+Documentar el modelo relacional de la base de datos mediante DBML
+(Database Markup Language), alineado con el esquema Prisma implementado.
 
 IMPORTANCIA:
-Permite visualizar y documentar cómo se organizarán los datos
-antes de implementar las tablas mediante SQL en PostgreSQL.
+Permite visualizar tablas, columnas, claves y relaciones de la versión
+actual del proyecto.
 
 RELACIÓN CON LOS DOCUMENTOS ANTERIORES:
-
-- 00.0_requirements.md:
-  Define las necesidades del cliente.
-- 01.0_business-rules.md:
-  Define las reglas del negocio.
-- 02.0_entities-and-attributes.md:
-  Identifica entidades y atributos.
-- 03.0_diagram-er.md:
-  Representa las relaciones conceptuales.
-- 04.0_relation-model.dbml:
-  Define la estructura lógica de tablas y relaciones.
+- 00.0_requirements.md: necesidades funcionales.
+- 01.0_business-rules.md: reglas de negocio confirmadas.
+- 02.0_entities-and-attributes.md: entidades y atributos.
+- 03.0_diagram-er.md: relaciones conceptuales.
+- 04.0_relation-model.dbml: representación lógica del esquema.
 
 IMPORTANTE:
-DBML no es SQL. Es un lenguaje para describir estructuras
-de bases de datos. Se utilizará como referencia para implementar
-posteriormente el esquema en PostgreSQL.
+DBML es un lenguaje de descripción, no SQL ni una migración.
+El esquema Prisma y las migraciones aplicadas son la referencia física.
 */
 
 /*
@@ -39,527 +30,288 @@ posteriormente el esquema en PostgreSQL.
 CONCEPTOS FUNDAMENTALES
 ============================================================
 
-TABLA:
-Representa una entidad o asociación cuyos registros almacenaremos.
-
-COLUMNA:
-Representa un atributo de una tabla.
-
-PRIMARY KEY (PK):
-Identifica de forma única cada registro.
-
-FOREIGN KEY (FK):
-Establece una relación entre tablas.
-
-UNIQUE:
-Evita que un valor o combinación de valores se repita.
-
-NOT NULL:
-Indica que una columna debe contener un valor.
-
-DEFAULT:
-Define un valor predeterminado.
-
-INDEX:
-Estructura que puede mejorar el rendimiento de determinadas consultas.
+TABLA: representa un conjunto de registros.
+COLUMNA: representa un atributo.
+PRIMARY KEY (PK): identifica de forma única cada registro.
+FOREIGN KEY (FK): establece una relación entre tablas.
+UNIQUE: evita valores repetidos.
+NOT NULL: exige un valor.
+DEFAULT: define un valor predeterminado.
+INDEX: estructura que apoya consultas.
 */
-
-
-// ============================================================
-// 1. DEFINICIÓN DE TABLAS
-// ============================================================
 
 /*
-OBJETIVO:
-Declarar las tablas que formarán parte de la base de datos.
+============================================================
+1. DEFINICIÓN DE TABLAS
+============================================================
 
-TABLAS DEL PROYECTO:
+El modelo contiene cinco tablas:
+1. patients
+2. doctors
+3. specialties
+4. appointments
+5. users
 
-1. patients: almacena los datos de los pacientes.
-2. doctors: almacena los datos de los médicos.
-3. specialties: almacena el catálogo de especialidades.
-4. appointments: almacena las citas médicas.
-5. users: almacena las cuentas de acceso al sistema.
-
-JUSTIFICACIÓN:
-Cada tabla representa una entidad identificada en el documento
-02.0_entities-and-attributes.md.
-
-Appointment representa la asociación entre Patient y Doctor,
-ya que dicha relación contiene atributos propios: fecha y estado.
+Appointment representa la asociación entre Patient y Doctor y contiene
+atributos propios, entre ellos fecha de inicio, estado y motivo opcional.
 */
-
-
-// ============================================================
-// 2. DEFINICIÓN DE COLUMNAS Y TIPOS DE DATOS
-// ============================================================
 
 /*
-OBJETIVO:
-Definir las columnas correspondientes a cada entidad.
+============================================================
+2. DEFINICIÓN DE COLUMNAS Y TIPOS DE DATOS
+============================================================
 
-Para cada columna debemos especificar:
-- Nombre.
-- Tipo de dato.
-- Restricciones.
-- Valor predeterminado, cuando corresponda.
+Criterios alineados con el esquema Prisma:
+- uuid: identificadores UUID.
+- text: propiedades String de Prisma sin longitud física adicional
+  documentada en este modelo.
+- date: fecha sin componente horario.
+- timestamp: fecha y hora de inicio según el tipo físico de Prisma.
+- Enum: valores controlados definidos por el esquema.
 
-CRITERIOS GENERALES:
+La propiedad Prisma Appointment.scheduledAt se mapea a la columna
+PostgreSQL startAt.
 
-- integer: identificadores numéricos.
-- varchar(n): cadenas de texto con longitud limitada.
-- date: fecha de nacimiento.
-- timestamp: fecha y hora de la cita.
-- password_hash: se representa mediante varchar, no se almacena
-  una contraseña en texto plano.
-
-Los identificadores utilizan incremento automático.
+No se agregan columnas que no estén confirmadas en el esquema.
 */
 
-
-// Catálogo de especialidades médicas.
-Table specialties {
-  // Identificador único de la especialidad.
-  id integer [primary key, increment]
-
-  // Nombre de la especialidad.
-  name varchar(100) [not null, unique]
-
-  Note: 'Catálogo administrado por GERENCIA. Cada nombre de especialidad debe ser único.'
+Enum "AppointmentStatus" {
+  PROGRAMADA
+  COMPLETADA
+  CANCELADA
 }
 
-
-// Información de los médicos.
-Table doctors {
-  // Identificador único del médico.
-  id integer [primary key, increment]
-
-  // Nombre del médico.
-  first_name varchar(100) [not null]
-
-  // Apellido del médico.
-  last_name varchar(100) [not null]
-
-  // Cédula profesional única.
-  professional_license varchar(50) [not null, unique]
-
-  // Correo electrónico opcional.
-  email varchar(255)
-
-  // Especialidad a la que pertenece el médico.
-  specialty_id integer [not null]
-
-  Note: 'Cada médico pertenece obligatoriamente a una especialidad existente. Su registro y administración corresponden a GERENCIA.'
+Enum "UserRole" {
+  RECEPCIONISTA
+  MEDICO
+  GERENCIA
 }
 
+Table "specialties" {
+  id uuid [pk]
+  name text [not null, unique]
 
-// Información de los pacientes.
-Table patients {
-  // Identificador único del paciente.
-  id integer [primary key, increment]
-
-  // Nombre del paciente.
-  first_name varchar(100) [not null]
-
-  // Apellido del paciente.
-  last_name varchar(100) [not null]
-
-  // Correo electrónico único.
-  email varchar(255) [not null, unique]
-
-  // Fecha de nacimiento.
-  birth_date date [not null]
-
-  // Teléfono opcional.
-  phone varchar(20)
-
-  Note: 'Almacena los datos personales de los pacientes. El correo electrónico identifica de forma única el registro.'
+  Note: 'Catálogo de especialidades médicas.'
 }
 
+Table "doctors" {
+  id uuid [pk]
+  firstName text [not null]
+  lastName text [not null]
+  professionalLicense text [not null, unique]
+  email text
+  specialtyId uuid [not null]
 
-// Citas médicas.
-Table appointments {
-  // Identificador único de la cita.
-  id integer [primary key, increment]
+  Note: 'Cada médico referencia una especialidad existente.'
+}
 
-  // Paciente asociado a la cita.
-  patient_id integer [not null]
+Table "patients" {
+  id uuid [pk]
+  firstName text [not null]
+  lastName text [not null]
+  email text [not null, unique]
+  birthDate date [not null]
+  phone text
 
-  // Médico que atenderá la cita.
-  doctor_id integer [not null]
+  Note: 'Datos de las personas que reciben atención.'
+}
 
-  // Instante de inicio de la cita, almacenado con zona horaria.
-  start_at timestamptz [not null]
-
-  // Estado de la cita.
-  status appointment_status [not null, default: 'PROGRAMADA']
+Table "appointments" {
+  id uuid [pk]
+  patientId uuid [not null]
+  doctorId uuid [not null]
+  startAt timestamp [not null, note: 'Corresponde a Appointment.scheduledAt en Prisma.']
+  status "AppointmentStatus" [not null, default: 'PROGRAMADA']
+  reason text
 
   Indexes {
-    (doctor_id, start_at) [name: 'idx_appointments_doctor_start_at']
-    (patient_id, start_at) [name: 'idx_appointments_patient_start_at']
-    (status, start_at) [name: 'idx_appointments_status_start_at']
+    (doctorId, startAt) [name: 'appointments_doctorId_scheduledAt_idx']
+    (patientId, startAt) [name: 'appointments_patientId_scheduledAt_idx']
+    (status, startAt) [name: 'appointments_status_scheduledAt_idx']
   }
 
-  Note: 'Cada cita pertenece a un paciente y a un médico. La duración es fija de 30 minutos y no se almacena como columna. start_at representa un instante interpretado en America/Mexico_City y almacenado en UTC.'
+  Note: 'Cada cita referencia un paciente y un médico. reason es opcional. La columna startAt corresponde a la propiedad scheduledAt del modelo Prisma.'
 }
 
+Table "users" {
+  id uuid [pk]
+  email text [not null, unique]
+  passwordHash text [not null]
+  role "UserRole" [not null]
+  doctorId uuid [unique]
 
-// Cuentas de acceso al sistema.
-Table users {
-  // Identificador único de la cuenta.
-  id integer [primary key, increment]
-
-  // Correo electrónico utilizado para acceder al sistema.
-  email varchar(255) [not null, unique]
-
-  // Contraseña almacenada como hash.
-  password_hash varchar(255) [not null]
-
-  // Rol asignado a la cuenta.
-  role user_role [not null]
-
-  // Médico asociado cuando la cuenta tiene rol MEDICO.
-  // Es opcional para cuentas RECEPCIONISTA y GERENCIA.
-  doctor_id integer [unique]
-
-  Note: 'Las cuentas son creadas por GERENCIA. No existe registro público. Una cuenta MEDICO debe vincularse a un médico existente. Un médico puede tener como máximo una cuenta.'
+  Note: 'doctorId es opcional y único. La regla condicional que vincula las cuentas MEDICO con un registro Doctor corresponde a la lógica de aplicación.'
 }
-
 
 /*
 ============================================================
 3. CLAVES PRIMARIAS (PRIMARY KEY)
 ============================================================
 
-OBJETIVO:
-Identificar de forma única cada registro de una tabla.
-
-CARACTERÍSTICAS:
-- No admite valores duplicados.
-- No admite valores NULL.
-- Cada tabla utiliza una clave primaria simple.
-
-JUSTIFICACIÓN:
-Se utiliza un identificador numérico autoincremental para cada
-entidad. Esto permite identificar los registros sin depender
-de atributos que podrían cambiar, como nombres o correos.
-
-CLAVES PRIMARIAS:
-
+Cada tabla utiliza una clave primaria simple de tipo UUID:
 - specialties.id
 - doctors.id
 - patients.id
 - appointments.id
 - users.id
 
-No se requieren claves primarias compuestas en este modelo.
+No se utilizan identificadores integer autoincrementales ni claves
+primarias compuestas en el esquema documentado.
 */
-
-
-// ============================================================
-// 4. CLAVES FORÁNEAS (FOREIGN KEY)
-// ============================================================
 
 /*
-OBJETIVO:
-Representar relaciones entre tablas mediante referencias
-a claves primarias de otras tablas.
+============================================================
+4. CLAVES FORÁNEAS (FOREIGN KEY)
+============================================================
 
-RELACIONES:
+- doctors.specialtyId referencia specialties.id.
+- appointments.patientId referencia patients.id.
+- appointments.doctorId referencia doctors.id.
+- users.doctorId referencia doctors.id.
 
-- doctors.specialty_id referencia specialties.id.
-- appointments.patient_id referencia patients.id.
-- appointments.doctor_id referencia doctors.id.
-- users.doctor_id referencia doctors.id.
-
-JUSTIFICACIÓN:
-
-Una especialidad puede estar asociada a varios médicos,
-pero cada médico debe pertenecer a una especialidad.
-
-Un paciente puede tener varias citas, pero cada cita
-pertenece a un paciente.
-
-Un médico puede atender varias citas, pero cada cita
-corresponde a un médico.
-
-Una cuenta puede estar vinculada a un médico cuando su rol
-es MEDICO. La columna doctor_id es opcional y única.
-
-IMPORTANTE:
-La obligatoriedad condicional de users.doctor_id según el rol
-debe validarse adicionalmente en PostgreSQL o en la aplicación.
+La columna users.doctorId admite NULL y tiene restricción UNIQUE.
+La obligatoriedad de la asociación para el rol MEDICO no se deduce
+únicamente de la FK; debe tratarse como regla de aplicación.
 */
 
+Ref: "doctors".specialtyId > "specialties".id
+Ref: "appointments".patientId > "patients".id
+Ref: "appointments".doctorId > "doctors".id
+Ref: "users".doctorId - "doctors".id
 
-// ============================================================
-// 5. RELACIONES ENTRE TABLAS
-// ============================================================
+/*
+============================================================
+5. RELACIONES ENTRE TABLAS
+============================================================
 
-// Una especialidad puede clasificar a varios médicos.
-Ref: doctors.specialty_id > specialties.id
+- Specialty 1:N Doctor.
+- Patient 1:N Appointment.
+- Doctor 1:N Appointment.
+- Doctor 0..1:0..1 User, mediante users.doctorId.
 
-// Un paciente puede tener varias citas.
-Ref: appointments.patient_id > patients.id
-
-// Un médico puede atender varias citas.
-Ref: appointments.doctor_id > doctors.id
-
-// Un médico puede tener cero o una cuenta de usuario.
-// Cada cuenta MEDICO debe estar vinculada a un médico.
-// La condición del rol requiere validación adicional.
-Ref: users.doctor_id - doctors.id
-
+Appointment resuelve la asociación entre pacientes y médicos a través
+de las citas. No se agrega una tabla N:M adicional.
+*/
 
 /*
 ============================================================
 6. RESTRICCIONES DE UNICIDAD (UNIQUE)
 ============================================================
 
-OBJETIVO:
-Evitar que determinados valores se repitan en una tabla.
+Restricciones confirmadas en el modelo:
+- patients.email.
+- doctors.professionalLicense.
+- specialties.name.
+- users.email.
+- users.doctorId.
 
-RESTRICCIONES DEFINIDAS:
-
-- patients.email:
-  Cada paciente debe tener un correo electrónico único.
-
-- doctors.professional_license:
-  Cada médico debe tener una cédula profesional única.
-
-- specialties.name:
-  Cada especialidad debe tener un nombre único.
-
-- users.email:
-  Cada cuenta del sistema debe tener un correo electrónico único.
-
-- users.doctor_id:
-  Un médico puede estar vinculado como máximo a una cuenta.
-
-JUSTIFICACIÓN:
-Estas restricciones responden a las reglas de negocio
-definidas en 01.0_business-rules.md.
-
-IMPORTANTE:
-No se establece UNIQUE para doctors.email porque el correo
-del médico es opcional y el negocio no definió que deba ser único.
+No se documenta UNIQUE para doctors.email.
 */
-
 
 /*
 ============================================================
 7. RESTRICCIONES Y VALORES PREDETERMINADOS
 ============================================================
 
-OBJETIVO:
-Documentar condiciones adicionales que deben cumplir las columnas.
-
-RESTRICCIONES REPRESENTADAS:
-
-- NOT NULL:
-  Se utiliza en los atributos obligatorios.
-
-- UNIQUE:
-  Se utiliza en los identificadores naturales definidos
-  como únicos por las reglas de negocio.
-
-- DEFAULT:
-  Una cita nueva comienza con estado PROGRAMADA.
-
-- ENUM:
-  Los estados de las citas y los roles de usuario utilizan
-  valores controlados.
-
 ESTADOS DE CITA:
-
 - PROGRAMADA
 - COMPLETADA
 - CANCELADA
 
 ROLES DE USUARIO:
-
 - RECEPCIONISTA
 - MEDICO
 - GERENCIA
+
+Appointment.status tiene como valor predeterminado PROGRAMADA.
+
+Appointment.reason es opcional.
+
+No se incorporan como restricciones del modelo:
+- Duración fija de 30 minutos.
+- Cálculo de endAt.
+- Prevención de traslapes.
+- Liberación de horario al cancelar.
+- Transiciones irreversibles de estado.
+- Zona horaria de negocio fija America/Mexico_City.
+
+Estas reglas no deben describirse como implementadas sin evidencia
+específica en el esquema y la lógica actual.
 */
 
-
-Enum appointment_status {
-  PROGRAMADA
-  COMPLETADA
-  CANCELADA
-}
-
-Enum user_role {
-  RECEPCIONISTA
-  MEDICO
-  GERENCIA
-}
-
-
 /*
-RESTRICCIONES QUE REQUIEREN IMPLEMENTACIÓN Y PRUEBAS POSTERIORES:
+============================================================
+8. ÍNDICES
+============================================================
 
-1. La fecha de nacimiento del paciente no puede ser futura.
+Índices compuestos documentados en Appointment:
+- doctorId + scheduledAt: consultas de agenda por médico y fecha.
+- patientId + scheduledAt: consultas de citas por paciente y fecha.
+- status + scheduledAt: consultas por estado y fecha.
 
-2. El inicio de una cita no puede estar en el pasado.
+En la base de datos, el primer índice utiliza la columna física startAt,
+correspondiente a la propiedad Prisma scheduledAt.
 
-3. Vínculo entre rol y médico:
-   - Una cuenta MEDICO debe tener un doctor_id existente.
-   - Una cuenta RECEPCIONISTA o GERENCIA debe tener doctor_id nulo.
-   - Un médico puede tener como máximo una cuenta.
-
-4. Prevención de traslapes:
-   - No permitir traslapes entre citas activas del mismo médico.
-   - No permitir traslapes entre citas activas del mismo paciente.
-   - Las citas CANCELADAS no bloquean horarios.
-   - Las citas consecutivas están permitidas.
-
-5. Duración de las citas:
-   - Cada cita dura exactamente 30 minutos.
-
-6. Estados:
-   - Una cita nueva comienza como PROGRAMADA.
-   - Solo se permiten las transiciones PROGRAMADA -> COMPLETADA
-     y PROGRAMADA -> CANCELADA.
-   - COMPLETADA y CANCELADA son estados finales.
-
-7. El inicio de la cita debe interpretarse en America/Mexico_City
-   y almacenarse como un instante normalizado en UTC. La aplicación
-   es responsable de convertir correctamente la fecha y hora recibidas.
-
-Estas restricciones deberán implementarse y probarse en las etapas
-de desarrollo del esquema PostgreSQL y de la lógica de negocio de la API.
+Las restricciones UNIQUE también generan estructuras de índice según
+el motor de base de datos.
 */
 
-
-// ============================================================
-// 8. ÍNDICES
-// ============================================================
-
 /*
-OBJETIVO:
-Documentar índices que podrían mejorar el rendimiento
-de consultas frecuentes.
+============================================================
+9. NOTAS Y DOCUMENTACIÓN DE COLUMNAS
+============================================================
 
-ÍNDICES PROPUESTOS:
+DECISIONES IMPORTANTES:
+- Los identificadores son UUID.
+- Appointment.scheduledAt se mapea a la columna PostgreSQL startAt.
+- Appointment.reason admite NULL.
+- Appointment.status utiliza el enum AppointmentStatus y su valor
+  predeterminado es PROGRAMADA.
+- User.role utiliza el enum UserRole.
+- User.doctorId es opcional y único.
+- No se define endAt ni una duración fija en este modelo.
 
-- appointments(doctor_id, start_at):
-  Apoya la agenda médica por rango de fechas.
-
-- appointments(patient_id, start_at):
-  Apoya el historial de citas del paciente.
-
-- appointments(status, start_at):
-  Apoya las consultas por estado y fecha.
-
-Son índices propuestos para las consultas identificadas.
-Su conveniencia definitiva deberá comprobarse mediante consultas
-y pruebas de rendimiento.
-
-IMPORTANTE:
-Las restricciones UNIQUE generan sus propios índices
-en PostgreSQL. No se duplican aquí.
+Los reportes y sus agregaciones se obtienen mediante consultas; no
+requieren tablas adicionales en este esquema.
 */
 
-
-// ============================================================
-// 9. NOTAS Y DOCUMENTACIÓN DE COLUMNAS
-// ============================================================
-
 /*
-OBJETIVO:
-Agregar explicaciones sobre tablas y columnas cuando sea necesario.
+============================================================
+10. VALIDACIÓN DEL MODELO RELACIONAL
+============================================================
 
-DECISIONES IMPORTANTES DEL MODELO:
+CRITERIOS DE CONTRASTE DOCUMENTAL:
+- Cinco tablas correspondientes a los cinco modelos principales.
+- Identificadores UUID.
+- Claves foráneas entre las entidades relacionadas.
+- Restricciones UNIQUE identificadas.
+- Enums AppointmentStatus y UserRole.
+- Appointment.reason opcional.
+- Mapeo scheduledAt -> startAt.
+- Índices compuestos de Appointment.
 
-- Appointment.start_at almacena el instante de inicio.
-- La zona horaria de interpretación para el usuario es
-  America/Mexico_City.
-- La aplicación convierte y almacena los instantes en UTC.
-- La duración de 30 minutos es fija.
-- La hora de finalización se calcula, no se almacena.
-- Appointment.status representa el estado actual de la cita.
-- User.doctor_id solo corresponde a cuentas con rol MEDICO.
-
-ATRIBUTOS NO ALMACENADOS:
-
-- end_at: se calcula sumando 30 minutos a start_at.
-- duration: es una regla fija del negocio.
-- rentabilidad: fuera del alcance porque no existen datos financieros.
-
-Estas decisiones evitan almacenar información redundante
-y mantienen el modelo alineado con los documentos anteriores.
+ESTADO DE VALIDACIÓN:
+El modelo se ha ajustado a las características del esquema Prisma y
+a los detalles de migración previamente comprobados. La validación
+documental no sustituye una comparación automática de todo el DBML
+contra el SQL generado ni pruebas funcionales HTTP.
 */
 
-
-// ============================================================
-// 10. VALIDACIÓN DEL MODELO RELACIONAL
-// ============================================================
-
 /*
-OBJETIVO:
-Comprobar que el modelo DBML representa correctamente
-las entidades, atributos y relaciones definidas previamente.
+============================================================
+11. RESULTADO ESPERADO
+============================================================
 
-CRITERIOS DE VALIDACIÓN:
-
-- Todas las tablas tienen una justificación.
-- Todas las columnas representan atributos necesarios.
-- Cada tabla tiene una clave primaria definida.
-- Las claves foráneas apuntan a tablas y columnas existentes.
-- Las relaciones corresponden al diagrama entidad-relación.
-- Las restricciones UNIQUE y NOT NULL tienen justificación.
-- Los tipos de datos son adecuados.
-- Los estados y roles están controlados.
-- La cuenta MEDICO tiene una relación condicional con Doctor.
-- Los índices propuestos corresponden a consultas frecuentes y su
-  conveniencia deberá comprobarse mediante pruebas de rendimiento.
-- No existen relaciones contradictorias con el modelo conceptual.
-
-RESTRICCIONES QUE REQUIEREN IMPLEMENTACIÓN Y PRUEBAS POSTERIORES:
-
-- Validación de fecha de nacimiento.
-- Validación de fecha futura para citas.
-- Vínculo entre rol y médico: una cuenta MEDICO debe tener un
-  doctor_id existente; RECEPCIONISTA y GERENCIA deben tenerlo nulo;
-  y cada médico puede tener como máximo una cuenta.
-- Prevención de traslapes entre citas activas del mismo médico
-  y del mismo paciente. Las citas CANCELADAS no bloquean horarios
-  y las citas consecutivas están permitidas.
-- Duración fija de 30 minutos por cita.
-- Estados: una cita nueva comienza como PROGRAMADA; solo se permiten
-  las transiciones PROGRAMADA -> COMPLETADA y PROGRAMADA -> CANCELADA;
-  COMPLETADA y CANCELADA son estados finales.
-- Interpretación de fechas en America/Mexico_City y almacenamiento
-  de instantes en UTC; la aplicación debe convertir correctamente
-  la fecha y hora recibidas.
-
-IMPORTANTE:
-La validación del modelo DBML no sustituye la ejecución
-y prueba del esquema SQL en PostgreSQL y de la lógica de negocio de la API.
-*/
-
-
-// ============================================================
-// 11. RESULTADO ESPERADO
-// ============================================================
-
-/*
-Al finalizar esta etapa debemos contar con una descripción lógica
-de la base de datos que incluya:
-
+Al finalizar esta etapa se cuenta con una descripción DBML del modelo
+relacional de la versión actual:
 - Cinco tablas.
-- Columnas y tipos de datos.
-- Claves primarias.
+- Columnas y tipos alineados con Prisma.
+- Claves primarias UUID.
 - Claves foráneas.
-- Relaciones.
 - Restricciones de unicidad.
 - Campos obligatorios y opcionales.
-- Valores predeterminados.
-- Roles y estados controlados.
-- Índices justificados.
-- Notas sobre reglas que requieren implementación adicional.
+- Valores predeterminados y enums.
+- Índices compuestos documentados.
 
 ENTREGABLE:
 Modelo relacional documentado en formato DBML.
@@ -567,3 +319,8 @@ Modelo relacional documentado en formato DBML.
 SIGUIENTE ETAPA:
 05.0_normalization.md
 */
+'''
+
+path = Path("/mnt/data/04.0_relation-model_revisado.dbml")
+path.write_text(dbml, encoding="utf-8")
+print(f"Archivo creado: {path.name} ({len(dbml.splitlines())} líneas)")

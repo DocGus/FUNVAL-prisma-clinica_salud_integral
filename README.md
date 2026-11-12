@@ -1,102 +1,156 @@
-# Clínica Salud Integral — API REST
+from pathlib import Path
 
-## 1. Caso de negocio
+readme = r"""# Clínica Salud Integral — API REST
 
-Clínica Salud Integral administra pacientes, médicos y citas mediante hojas de cálculo. Este método provoca pérdida de información, duplicidad de registros y conflictos de horarios.
+## 0.0 Caso de negocio
 
-**Solución:** desarrollar una API REST que centralice la información clínica y la gestión de citas, controle la disponibilidad de médicos y pacientes, y proporcione información para la toma de decisiones de gerencia.
+Clínica Salud Integral requiere centralizar la información de pacientes, médicos, especialidades y citas mediante una API REST. El proyecto proporciona una base de persistencia y servicios HTTP para gestionar las operaciones contempladas en su alcance actual.
 
-## 2. Decisiones acordadas con el cliente
+**Solución:** una API REST desarrollada con Node.js, TypeScript, Express y PostgreSQL, con acceso a datos mediante Prisma ORM. La API incorpora autenticación, autorización por roles, operaciones de citas y consultas de reportes.
 
-Para convertir el enunciado inicial en un sistema desarrollable, se definieron las siguientes condiciones:
+La versión actual no debe describirse como un sistema integral de expediente clínico ni como un motor completo de disponibilidad: esas capacidades no están acreditadas por la implementación revisada.
 
-- Cada cita dura **30 minutos**.
-- Cada médico pertenece a una sola especialidad.
+## 0.1 Decisiones acordadas y alcance implementado
+
+Las siguientes decisiones corresponden al esquema y al código revisados:
+
+- Cada médico pertenece a una especialidad.
 - Una cita requiere un paciente y un médico existentes.
-- No se permiten horarios traslapados para un médico ni para un paciente.
-- Se permiten citas consecutivas.
-- Las citas canceladas liberan el horario; las programadas y completadas lo ocupan.
-- Toda cita comienza como `PROGRAMADA` y solo puede cambiar a `COMPLETADA` o `CANCELADA`.
-- Los estados finales no pueden modificarse.
-- La inasistencia se registra como `CANCELADA`.
-- Las fechas se interpretan en `America/Mexico_City` y se almacenan como instantes UTC.
-- RECEPCIONISTA registra pacientes y programa citas; MEDICO consulta su agenda y actualiza sus citas; GERENCIA administra médicos, especialidades y usuarios, y consulta reportes.
-- No existe registro público de usuarios. GERENCIA crea las cuentas y la primera cuenta se aprovisiona mediante un procedimiento controlado.
-- Los reportes incluyen el volumen de citas por especialidad y el corte diario de citas completadas y canceladas.
+- La fecha de inicio de una cita no puede estar en el pasado.
+- Toda cita nueva comienza con estado `PROGRAMADA`.
+- Los estados definidos son `PROGRAMADA`, `COMPLETADA` y `CANCELADA`.
+- La operación de actualización de estado acepta `COMPLETADA` o `CANCELADA` como estados destino.
+- El motivo de la cita (`reason`) es opcional.
+- La agenda se consulta para el médico autenticado.
+- Los filtros `from` y `to` se aplican como rango cuando ambos están presentes.
+- Las rutas protegidas revisadas utilizan autenticación JWT y autorización por rol.
+- Las operaciones de agenda y actualización de citas comprueban la pertenencia del recurso al médico autenticado.
+- Los reportes revisados están restringidos al rol `GERENCIA`.
 
-## 3. Reglas de negocio
 
-- Pacientes: nombre, apellido, correo y fecha de nacimiento obligatorios; teléfono opcional. El correo es único.
-- Médicos: nombre, apellido, cédula profesional y especialidad obligatorios; correo opcional. La cédula es única.
-- Especialidades: nombre obligatorio y único.
-- Usuarios: correo único, contraseña almacenada como hash y rol obligatorio. Las cuentas MEDICO deben vincularse con un médico existente; cada médico puede tener como máximo una cuenta.
-- Citas: duración fija de 30 minutos, inicio no pasado y sin traslapes para paciente o médico.
-- Estados: `PROGRAMADA`, `COMPLETADA` y `CANCELADA`, con transiciones controladas.
-- Acceso: autenticación JWT, permisos por rol y restricción de los médicos a sus propias citas.
-- Agenda: rango inicial inclusivo y final exclusivo.
-- Corte diario: día calendario de Ciudad de México; contabiliza únicamente citas `COMPLETADA` y `CANCELADA`.
+## 1.0 Reglas de negocio y permisos confirmados
 
-## 4. Modelo de datos
+- **Citas:** el paciente y el médico deben existir; la fecha debe ser futura; el estado inicial es `PROGRAMADA`; `reason` es opcional.
+- **Estados:** el esquema contempla `PROGRAMADA`, `COMPLETADA` y `CANCELADA`. La validación de actualización acepta `COMPLETADA` o `CANCELADA`.
+- **Agenda:** el médico consulta su propia agenda; los resultados incluyen información del paciente y se ordenan por fecha ascendente.
+- **Autorización:** las rutas protegidas verifican el JWT y el rol requerido.
+- **Pertenencia:** un médico no debe consultar ni actualizar citas pertenecientes a otro médico.
+- **Reportes:** los endpoints de reportes revisados requieren el rol `GERENCIA`; el corte diario contabiliza citas `COMPLETADA` y `CANCELADA`.
 
-Se utilizarán cinco entidades:
+### Roles definidos
 
-| Entidad / tabla | Atributos principales |
+| Rol | Responsabilidad general |
 |---|---|
-| Patient / `patients` | id, firstName, lastName, email, birthDate, phone |
-| Doctor / `doctors` | id, firstName, lastName, professionalLicense, email, specialtyId |
-| Specialty / `specialties` | id, name |
-| Appointment / `appointments` | id, patientId, doctorId, startAt, status |
-| User / `users` | id, email, passwordHash, role, doctorId |
+| `RECEPCIONISTA` | Puede programar citas y consultar el directorio médico, según las rutas revisadas. |
+| `MEDICO` | Puede consultar su agenda y actualizar el estado de sus propias citas. |
+| `GERENCIA` | Puede consultar los reportes gerenciales revisados. |
 
-La duración de la cita es fija y su hora de finalización se calcula a partir de `startAt`; no se almacena como atributo independiente.
+Esta tabla resume los permisos confirmados en las rutas inspeccionadas; no constituye una matriz exhaustiva de permisos para todos los recursos.
 
-### Relaciones y cardinalidades
+## 2.0 Entidades y Atributos
+
+La base de datos utiliza cinco modelos principales:
+
+| Modelo / tabla | Atributos principales |
+|---|---|
+| `Patient` / `patients` | `id`, `firstName`, `lastName`, `email`, `birthDate`, `phone` |
+| `Doctor` / `doctors` | `id`, `firstName`, `lastName`, `professionalLicense`, `email`, `specialtyId` |
+| `Specialty` / `specialties` | `id`, `name` |
+| `Appointment` / `appointments` | `id`, `patientId`, `doctorId`, `scheduledAt`, `reason`, `status` |
+| `User` / `users` | `id`, `email`, `passwordHash`, `role`, `doctorId` |
+
+En `Appointment`, el campo Prisma `scheduledAt` se mapea a la columna física `startAt` en PostgreSQL. `reason` es opcional.
+
+Los identificadores principales utilizan UUID.
+
+## 4.0 Relaciones y Cardinalidades
 
 - `Specialty 1:N Doctor`: una especialidad puede tener varios médicos; cada médico pertenece a una especialidad.
 - `Patient 1:N Appointment`: un paciente puede tener varias citas; cada cita corresponde a un paciente.
 - `Doctor 1:N Appointment`: un médico puede atender varias citas; cada cita corresponde a un médico.
-- `Doctor 1:0..1 User`: un médico puede tener como máximo una cuenta; las cuentas con rol MEDICO requieren un médico asociado.
-- `Appointment` relaciona pacientes y médicos, resolviendo la relación muchos a muchos a través del historial de citas.
+- `Doctor 1:0..1 User`: un médico puede estar asociado como máximo a una cuenta; `User.doctorId` es opcional y único.
+- `Appointment` relaciona pacientes y médicos a través de las citas.
 
-## 5. Arquitectura de la aplicación
+La relación opcional entre `User` y `Doctor` se define en el esquema. La lógica de aplicación comprueba la asociación del médico autenticado para las operaciones que requieren esa pertenencia.
 
-Se utilizará una arquitectura **MVC modular por capas**, complementada con servicios y middlewares. Al ser una API, las respuestas HTTP/JSON cumplen el papel de salida para los clientes en lugar de vistas HTML tradicionales.
+## 6.0 Arquitectura de la aplicación
 
-- **Routes:** definen los endpoints.
-- **Middlewares:** autenticación, autorización y validaciones.
+El backend utiliza una arquitectura modular por capas:
+
+- **Routes:** definen los endpoints y conectan las solicitudes con los controladores.
+- **Middlewares:** ejecutan autenticación, autorización, validación y manejo transversal de errores.
 - **Controllers:** reciben solicitudes y construyen respuestas HTTP.
-- **Services:** implementan las reglas de negocio y coordinan operaciones.
-- **Models:** encapsulan las consultas y operaciones de persistencia.
-- **Prisma:** define el esquema, genera los tipos y el cliente de base de datos utilizado por los modelos.
+- **Services:** aplican reglas de negocio y coordinan operaciones.
+- **Models / acceso a datos:** encapsulan consultas y operaciones de persistencia mediante Prisma Client.
+- **Prisma:** define el esquema, genera los tipos y proporciona el cliente de acceso a PostgreSQL.
 - **Schemas:** validan los datos de entrada con Zod.
-- **Config:** centraliza variables de entorno y conexiones.
+- **Config:** centraliza la configuración del entorno y la conexión a la base de datos.
 
-Los servicios no acceden directamente a Prisma: invocan la capa `models/`, que contiene las operaciones de persistencia. Prisma ya genera los modelos y tipos a partir de `prisma/schema.prisma`; la carpeta `models/` es una capa propia de acceso a datos y no duplica esas definiciones.
+Los modelos y tipos de las entidades se definen en `prisma/schema.prisma`. La carpeta propia `src/models/` organiza las operaciones de acceso a datos y no duplica las definiciones generadas por Prisma.
 
-Esta separación sigue la recomendación de organizar los modelos en una carpeta `models/` y mantiene las responsabilidades claras: los controladores gestionan HTTP, los servicios aplican reglas de negocio y los modelos encapsulan las consultas con Prisma. También facilita probar servicios y persistencia de forma independiente. La estructura puede ampliarse por módulo conforme se agreguen funcionalidades.
+### Módulos y rutas montadas
 
-Módulos funcionales: Auth, Users, Patients, Doctors, Specialties, Appointments y Reports.
+La aplicación monta los siguientes routers y rutas:
+
+| Prefijo o ruta | Módulo |
+|---|---|
+| `/api/auth` | Autenticación |
+| `/api/appointments` | Citas |
+| `/api/doctors` | Médicos |
+| `/api/patients` | Pacientes |
+| `/api/reports` | Reportes |
+| `/api/specialties` | Especialidades |
+| `/health` | Estado de la aplicación |
+| `/api/docs` | Swagger UI |
+
+### Endpoints específicos revisados
+
+| Método | Endpoint | Función | Acceso confirmado |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | Iniciar sesión. | Público |
+| `POST` | `/api/appointments` | Programar una cita. | `RECEPCIONISTA` |
+| `PATCH` | `/api/appointments/:id/status` | Actualizar el estado de una cita. | `MEDICO` |
+| `GET` | `/api/doctors` | Consultar directorio médico. | `RECEPCIONISTA` |
+| `GET` | `/api/doctors/:id/appointments` | Consultar agenda de un médico. | `MEDICO`, con comprobación de pertenencia |
+| `GET` | `/api/reports/appointments-by-specialty` | Consultar volumen de citas por especialidad. | `GERENCIA` |
+| `GET` | `/api/reports/daily-cutoff` | Consultar corte operativo diario. | `GERENCIA` |
+
+Los routers de pacientes y especialidades están montados. Esta documentación no atribuye operaciones CRUD ni permisos concretos que no hayan sido confirmados en sus rutas.
 
 ### Tecnologías
 
-Node.js, TypeScript, Express 5, PostgreSQL, Prisma ORM 7, Zod, Vitest, Supertest y Swagger UI. JWT y bcryptjs forman parte de las decisiones previstas para el módulo de autenticación; su integración se realizará durante esa etapa.
-
-Las operaciones de citas contemplarán validación de traslapes y protección frente a solicitudes concurrentes. Los reportes utilizarán consultas especializadas de Prisma y SQL parametrizado cuando corresponda.
+- Node.js
+- TypeScript
+- Express 5
+- PostgreSQL
+- Prisma ORM 7
+- Zod
+- JWT
+- bcryptjs
+- Vitest
+- Supertest
+- Swagger UI / OpenAPI
 
 ## 6. Plantilla técnica del proyecto
 
-El desarrollo parte de una **plantilla Full Stack propia**, creada para estandarizar el inicio de APIs REST con Node.js y TypeScript.
+El proyecto parte de una plantilla técnica propia para APIs REST con Node.js y TypeScript.
 
-Incluye configuración de entorno, conexión PostgreSQL, Prisma ORM 7, ruta de salud (`GET /health`), documentación Swagger UI, pruebas con Vitest y Supertest, scripts de desarrollo y compilación, y estructura modular inicial.
+La base incluye configuración de entorno, conexión con PostgreSQL, Prisma ORM 7, ruta de salud (`GET /health`), documentación Swagger UI, pruebas automatizadas y scripts de desarrollo y compilación.
 
-La plantilla proporciona la infraestructura técnica; sobre ella se incorporarán los modelos, migraciones, módulos y reglas de negocio de Clínica Salud Integral.
+Sobre esa estructura se implementaron los modelos, migraciones y módulos específicos de Clínica Salud Integral.
 
-## 7. Instalación y ejecución
+### Datos iniciales
+
+El archivo `prisma/seed.ts` contiene un proceso de inicialización idempotente que crea o actualiza tres especialidades —Medicina General, Pediatría y Cardiología— y dos médicos por especialidad.
+
+El seed de catálogo no debe confundirse con un proceso de creación de cuentas de usuario ni con un mecanismo de aprovisionamiento de una cuenta GERENCIA.
+
+### Instalación y ejecución
 
 ### Requisitos
 
-- Node.js `>=20.19.0`.
-- pnpm `12.18.0`.
+- Node.js compatible con la versión declarada en `package.json`.
+- pnpm compatible con el proyecto.
 - PostgreSQL para la persistencia de la aplicación.
 
 ### Configuración
@@ -106,32 +160,62 @@ pnpm install
 cp .env.example .env
 ```
 
-Configurar `DATABASE_URL` en `.env`. No publicar credenciales ni archivos de entorno.
+Configurar en `.env` las variables requeridas por el esquema de entorno, especialmente `DATABASE_URL` para la conexión de la aplicación y `JWT_SECRET` para la firma de tokens. No publicar credenciales ni archivos de entorno.
+
+Para trabajar con la base de datos:
 
 ```bash
 pnpm prisma:generate
+```
+
+Aplicar las migraciones con el comando de Prisma definido por el proyecto y apuntando a la base de datos correcta. No ejecutar migraciones contra una base de datos de producción sin revisar previamente el destino.
+
+Iniciar el servidor en desarrollo:
+
+```bash
 pnpm dev
 ```
 
-API: `http://localhost:3000`
+Por defecto, la API se documenta para ejecutarse en:
 
-Documentación: `http://localhost:3000/api/docs`
+- API: `http://localhost:3000`
+- Documentación: `http://localhost:3000/api/docs`
+- Salud: `http://localhost:3000/health`
+
+El puerto efectivo depende de la configuración del entorno.
 
 ### Comandos principales
 
 ```bash
-pnpm dev                 # Desarrollo
-pnpm test                # Pruebas unitarias y HTTP
-pnpm test:integration    # Prueba de conexión PostgreSQL
-pnpm typecheck           # Verificación de tipos
+pnpm dev                 # Servidor de desarrollo
+pnpm test                # Pruebas automatizadas
+pnpm typecheck           # Verificación de tipos TypeScript
 pnpm build               # Compilación
-pnpm start               # Ejecución de producción
+pnpm start                # Ejecución de producción, si está definido en package.json
 pnpm prisma:generate     # Generación de Prisma Client
 ```
 
-La integración utiliza `TEST_DATABASE_URL`, que debe apuntar exclusivamente a una base de pruebas cuyo nombre termine en `_test`.
+El proyecto también contempla `pnpm test:integration`. Esta prueba debe ejecutarse únicamente con `TEST_DATABASE_URL` apuntando a una base de datos exclusiva de pruebas. La existencia de la variable no significa que las pruebas de integración ya se hayan ejecutado.
 
-## 8. Documentación del proyecto
+Antes de utilizar cualquier comando, se recomienda confirmar su definición exacta en `package.json`.
+
+### Verificaciones registradas
+
+En la revisión técnica documentada se obtuvieron estos resultados:
+
+| Verificación | Resultado |
+|---|---|
+| `pnpm typecheck` | Correcto. |
+| `pnpm build` | Correcto. |
+| `pnpm test` | Correcto: 23 archivos y 149 pruebas. |
+| `pnpm test:integration` | No ejecutado en esa revisión. |
+| Pruebas funcionales HTTP de aceptación | Pendientes. |
+
+También se verificó la aplicación de dos migraciones en la base de datos de pruebas y la presencia de la columna opcional `appointments.reason`.
+
+Estos resultados no sustituyen la ejecución de pruebas funcionales de aceptación sobre todos los endpoints y reglas de negocio.
+
+## 10.0 Documentación del proyecto
 
 El análisis y diseño se encuentra en `docs/`:
 
@@ -143,58 +227,64 @@ El análisis y diseño se encuentra en `docs/`:
 - `05.0_normalization.md`: análisis de normalización.
 - `06.0_architecture.md`: arquitectura y decisiones técnicas.
 
-## 9. Adaptaciones respecto a los ejercicios de FUNVAL
+Los documentos deben mantenerse alineados con el código y las migraciones de la versión vigente.
 
-Este proyecto toma como referencia los ejercicios prácticos desarrollados durante el programa FullStack FUNVAL. Sus ejemplos se adaptan a las tecnologías, arquitectura y reglas de negocio definidas para Clínica Salud Integral, en lugar de copiarse sin considerar el contexto.
+## 11.0 Adaptaciones respecto a los ejercicios de FUNVAL
 
-El objetivo es aplicar los conceptos aprendidos en un sistema más cercano a una aplicación real, conservando la coherencia del código y evitando cambios arquitectónicos que no aporten valor.
+Este proyecto toma como referencia los ejercicios prácticos desarrollados durante el programa FullStack FUNVAL. Sus ejemplos se adaptan a las tecnologías, arquitectura y necesidades de Clínica Salud Integral, en lugar de copiarse sin considerar el contexto.
 
-### 9.1. Identificadores UUID
+El objetivo es aplicar los conceptos aprendidos en un sistema concreto, conservando la coherencia del código y evitando cambios arquitectónicos que no aporten valor.
+
+### 11.1. Identificadores UUID
 
 Los ejercicios de referencia pueden utilizar identificadores numéricos. En este proyecto, los modelos de Prisma definen los identificadores como UUID (`String` en TypeScript y `@db.Uuid` en PostgreSQL).
 
 Los UUID no dependen de una secuencia numérica y son menos predecibles que los identificadores incrementales. Esto no sustituye la autenticación ni la autorización.
 
-### 9.2. Nomenclatura de la fecha de la cita
+### 11.2. Nomenclatura de la fecha de la cita
 
-En lugar de `scheduledAt`, el modelo utiliza `startAt` para identificar la fecha y hora de inicio de una cita. Esta denominación coincide con el modelo de datos del proyecto y se persiste como `DateTime` con zona horaria en PostgreSQL.
+En el modelo Prisma, el campo se denomina `scheduledAt`. En PostgreSQL se mapea a la columna física `startAt`. Es importante distinguir el nombre del campo del ORM del nombre de la columna persistida.
 
-### 9.3. Nombre del campo de contraseña
+### 11.3. Nombre del campo de contraseña
 
-El modelo `User` utiliza `passwordHash` para expresar que se almacenará un hash, no la contraseña original. El campo ya está definido en el esquema Prisma; el algoritmo y el flujo de hashing se integrarán con el módulo de autenticación. Nunca se almacenarán contraseñas en texto plano.
+El modelo `User` utiliza `passwordHash` para expresar que se almacena un hash, no la contraseña original. La autenticación utiliza bcryptjs para verificar las credenciales. Las contraseñas no deben almacenarse en texto plano.
 
-### 9.4. Convenciones de nomenclatura de archivos
+### 11.4. Convenciones de nomenclatura de archivos
 
-Los ejercicios pueden usar nombres como `patient.model.ts`, `auth.middleware.ts` y `auth.routes.ts`. El proyecto conserva la convención existente, por ejemplo `patientsModel.ts`, `patientsService.ts` y `patientsController.ts`.
+El proyecto conserva la convención de nombres establecida en el repositorio, por ejemplo, archivos de modelos, servicios y controladores con nombres como `patientsModel.ts`, `patients.service.ts` o `patients.controller.ts`, según la organización efectiva de cada módulo.
 
-Ambas convenciones son válidas; mantener una nomenclatura uniforme dentro del repositorio facilita la lectura y el mantenimiento.
+Mantener una nomenclatura uniforme dentro del repositorio facilita la lectura y el mantenimiento.
 
-### 9.5. Exportación de Prisma
+### 11.5. Exportación y uso de Prisma
 
-La instancia compartida de Prisma se exporta con nombre (`prisma`) desde `src/config/prisma.ts`. Se conserva esta convención en lugar de cambiarla a una exportación predeterminada, para mantener consistentes las importaciones existentes.
+La aplicación utiliza una instancia compartida de Prisma Client configurada para PostgreSQL mediante el adaptador correspondiente. Los servicios y módulos de acceso a datos deben reutilizar la instancia configurada, en lugar de crear conexiones independientes.
 
-### 9.6. Registro y administración de cuentas
+### 11.6. Registro y administración de cuentas
 
-El diseño del sistema no contempla un endpoint de registro público. Las cuentas serán creadas por GERENCIA según las reglas de negocio; la primera cuenta GERENCIA se provisionará mediante un procedimiento controlado de inicialización.
+El modelo `User` y el módulo de autenticación permiten identificar cuentas y autenticar usuarios. No se debe inferir de ello que exista un endpoint administrativo para crear, listar o modificar cuentas. Tampoco se documenta un endpoint de registro público como funcionalidad disponible.
 
-La creación de cuentas y el flujo de inicialización son decisiones de arquitectura previstas; sus endpoints y proceso se implementarán en la etapa correspondiente.
+### 11.7. Relación entre usuarios y médicos
 
-### 9.7. Relación entre usuarios y médicos
+`User` y `Doctor` representan conceptos distintos: una cuenta de acceso y un registro profesional. El esquema Prisma incorpora una relación opcional mediante `doctorId`, con unicidad para que un médico no tenga más de una cuenta. Las operaciones del rol `MEDICO` comprueban que exista una asociación válida con el registro médico correspondiente.
 
-`User` y `Doctor` representan conceptos distintos: una cuenta de acceso y un registro profesional. El esquema Prisma incorpora una relación opcional mediante `doctorId`, con unicidad para que un médico no tenga más de una cuenta. Las reglas requieren que las cuentas `MEDICO` tengan un médico asociado y que los demás roles no lo tengan.
+### 11.8. Configuración de JWT
 
-### 9.8. Configuración de JWT
+La autenticación utiliza JWT. La clave de firma debe configurarse mediante variables de entorno y mantenerse fuera del repositorio. La configuración efectiva debe consultarse en el esquema de entorno y en el archivo `.env.example`.
 
-La configuración existente centraliza y valida variables de entorno con Zod mediante `src/config/env.ts`. Cuando se implemente JWT, `JWT_SECRET` deberá incorporarse a ese esquema; actualmente esa variable y el flujo de autenticación aún no están implementados.
+### 11.9. Documentación de seguridad en Swagger
 
-### 9.9. Documentación de seguridad en Swagger
+Swagger UI está disponible en `/api/docs` para consultar la documentación de la API. La documentación debe reflejar las rutas y los mecanismos de autenticación realmente implementados, sin presentar como disponibles operaciones futuras.
 
-Swagger UI ya está integrado para servir la documentación de la API. El diseño arquitectónico prevé documentar las rutas protegidas con OpenAPI HTTP Bearer para JWT; el esquema de seguridad y las rutas autenticadas se completarán junto con el módulo de autenticación.
+### 11.10. Integración de middlewares
 
-### 9.10. Integración de middlewares
-
-La arquitectura prevista organiza rutas, middlewares, controladores, servicios y modelos por responsabilidad. Los middlewares de autenticación y autorización se integrarán en las rutas protegidas al implementar los módulos correspondientes; las rutas actuales de pacientes todavía no representan ese flujo completo.
+La arquitectura organiza rutas, middlewares, controladores, servicios y acceso a datos por responsabilidad. Las rutas protegidas revisadas utilizan autenticación y autorización; los permisos de cada endpoint deben verificarse en su implementación y no deducirse únicamente del nombre del módulo.
 
 ### Criterio general de adaptación
 
-Los ejercicios de FUNVAL sirven como referencia de aprendizaje e implementación. Se conservan las decisiones de arquitectura, nomenclatura, seguridad y reglas de negocio del proyecto cuando son coherentes con sus objetivos. Las adaptaciones permiten integrar los conocimientos del curso manteniendo la consistencia, la mantenibilidad y la evolución del sistema.
+Los ejercicios de FUNVAL sirven como referencia de aprendizaje e implementación. Se conservan las decisiones de arquitectura, nomenclatura, seguridad y reglas de negocio que son coherentes con el proyecto. Las adaptaciones permiten integrar los conocimientos del curso manteniendo la consistencia, la mantenibilidad y la evolución del sistema.
+"""
+
+out = Path("/mnt/data/README_revisado.md")
+out.write_text(readme, encoding="utf-8")
+print(f"Creado: {out}")
+print(f"Líneas: {len(readme.splitlines())}")

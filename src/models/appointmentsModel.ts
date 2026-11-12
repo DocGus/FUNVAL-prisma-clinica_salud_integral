@@ -1,3 +1,4 @@
+
 import type { Prisma } from "../../generated/prisma/client.js";
 import { AppointmentStatus } from "../../generated/prisma/client.js";
 import { prisma } from "../config/prisma.js";
@@ -43,20 +44,19 @@ export const createAppointmentsModel = (client: AppointmentsModelClient) => ({
     from?: Date,
     to?: Date,
   ) => {
-    const hasDateRange = Boolean(from && to);
+    const where: Prisma.AppointmentWhereInput = {
+      doctorId,
+    };
+
+    if (from !== undefined && to !== undefined) {
+      where.scheduledAt = {
+        gte: from,
+        lte: to,
+      };
+    }
 
     return client.appointment.findMany({
-      where: {
-        doctorId,
-        ...(hasDateRange
-          ? {
-              scheduledAt: {
-                gte: from,
-                lte: to,
-              },
-            }
-          : {}),
-      },
+      where,
       include: {
         patient: { select: appointmentPatientSelect },
       },
